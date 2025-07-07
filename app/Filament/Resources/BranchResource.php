@@ -13,6 +13,10 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 28095241346b047a3ed5b77266e70574ffa1bf35
 class BranchResource extends Resource
 {
     protected static ?string $model = Branch::class;
@@ -102,15 +106,31 @@ class BranchResource extends Resource
                             ->label('Address (English)')
                             ->rows(3),
                     ]),
-                Forms\Components\Grid::make(2)
+
+                // قسم الموقع والخريطة
+                Forms\Components\Section::make('الموقع والخريطة')
+                    ->description('حدد موقع الفرع على الخريطة')
                     ->schema([
-                        Forms\Components\TextInput::make('latitude')
-                            ->label('خط العرض')
-                            ->numeric(),
-                        Forms\Components\TextInput::make('longitude')
-                            ->label('خط الطول')
-                            ->numeric(),
-                    ]),
+                        Forms\Components\View::make('filament.forms.components.simple-map'),
+                        
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('latitude')
+                                    ->label('خط العرض (Latitude)')
+                                    ->numeric()
+                                    ->step(0.000001)
+                                    ->hidden()
+                                    ->dehydrated(),
+                                Forms\Components\TextInput::make('longitude')
+                                    ->label('خط الطول (Longitude)')
+                                    ->numeric()
+                                    ->step(0.000001)
+                                    ->hidden()
+                                    ->dehydrated(),
+                            ]),
+                    ])
+                    ->collapsible()
+                    ->collapsed(false),
                 Forms\Components\Toggle::make('is_active')
                     ->label('نشط')
                     ->default(true),

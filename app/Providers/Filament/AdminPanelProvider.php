@@ -120,6 +120,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::topbar.end',
                 fn (): string => view('filament.components.language-switcher')->render()
+            )
+            ->renderHook(
+                'panels::topbar.start',
+                fn (): string => view('filament.components.user-status')->render()
             );
     }
 }

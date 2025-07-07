@@ -26,6 +26,8 @@ class ComprehensiveSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             EducationLevelSeeder::class,
+            CallTypesSeeder::class,
+            HolidaysSeeder::class,
         ]);
 
         // إنشاء المستخدم المدير الرئيسي

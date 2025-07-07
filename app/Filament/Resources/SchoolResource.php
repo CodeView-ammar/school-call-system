@@ -17,6 +17,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 28095241346b047a3ed5b77266e70574ffa1bf35
 class SchoolResource extends Resource
 {
     protected static ?string $model = School::class;
@@ -107,6 +111,8 @@ class SchoolResource extends Resource
                 Forms\Components\Toggle::make('is_active')
                     ->label('نشط')
                     ->default(true),
+
+
                     
                 // إعدادات الفروع
                 Forms\Components\Section::make('إعدادات الفروع')
