@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('call_types', function (Blueprint $table) {
             $table->id('ctype_id');
-            $table->string('ctype_name_eng')->nullable()->comment('اسم نوع المكالمة بالإنجليزية');
-            $table->string('ctype_name_ar')->comment('اسم نوع المكالمة بالعربية');
+            $table->string('ctype_name_eng')->nullable()->comment('اسم نوع النداء بالإنجليزية');
+            $table->string('ctype_name_ar')->comment('اسم نوع النداء بالعربية');
             $table->string('ctype_cdate')->nullable()->comment('تاريخ الإنشاء');
             $table->string('ctype_udate')->nullable()->comment('تاريخ التحديث');
             $table->integer('ctype_isactive')->nullable()->default(1)->comment('حالة النشاط');

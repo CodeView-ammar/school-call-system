@@ -18,8 +18,16 @@ class StudentsRelationManager extends RelationManager
     public function form(Forms\Form $form): Forms\Form
     {
         return $form->schema([
+            
             Forms\Components\Grid::make(2)
                 ->schema([
+                    //         auth()->user()?->school_id === null
+                    // ? Forms\Components\Select::make('school_id')
+                    //     ->label('المدرسة')
+                    //     ->relationship('school', 'name_ar') // تأكد من أن العلاقة صحيحة
+                    //     ->required()
+                    //     ->searchable()
+                    //     ->preload(),
                     Forms\Components\TextInput::make('name_ar')
                         ->label('الاسم (عربي)')
                         ->required()

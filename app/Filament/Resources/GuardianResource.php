@@ -14,6 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Model; // Import the Model class
 
 class GuardianResource extends Resource
 {
@@ -28,7 +29,7 @@ class GuardianResource extends Resource
     protected static ?string $pluralModelLabel = 'أولياء الأمور';
 
     protected static ?string $navigationGroup = 'إدارة الطلاب';
-    
+
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
@@ -39,6 +40,14 @@ class GuardianResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make(2)
                             ->schema([
+                                Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->relationship('school', 'name_ar')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->columnSpanFull(),
+
                                 Forms\Components\TextInput::make('name_ar')
                                     ->label('الاسم (عربي)')
                                     ->required()
@@ -98,115 +107,20 @@ class GuardianResource extends Resource
                     ->columns(1),
 
                 Forms\Components\Section::make('الأطفال المرتبطين')
-                    ->description('يمكنك إضافة أو ربط عدة طلاب بولي الأمر')
                     ->schema([
-                        Forms\Components\Repeater::make('student_relationships')
+                        Forms\Components\Select::make('student_ids')
                             ->label('الطلاب')
-                            ->relationship('students')
-                            ->schema([
-                                Forms\Components\Select::make('student_id')
-                                    ->label('اختر الطالب')
-                                    ->searchable()
-                                    ->options(function () {
-                                        return Student::query()
-                                            ->where('is_active', true)
-                                            ->get()
-                                            ->pluck('name_ar', 'id')
-                                            ->map(function ($name, $id) {
-                                                $student = Student::find($id);
-                                                return "{$name} - كود: {$student->code}";
-                                            })
-                                            ->toArray();
-                                    })
-                                    ->getSearchResultsUsing(function (string $search) {
-                                        return Student::where('name_ar', 'like', "%{$search}%")
-                                            ->orWhere('name_en', 'like', "%{$search}%")
-                                            ->orWhere('code', 'like', "%{$search}%")
-                                            ->orWhere('student_number', 'like', "%{$search}%")
-                                            ->where('is_active', true)
-                                            ->limit(50)
-                                            ->get()
-                                            ->mapWithKeys(function ($student) {
-                                                return [$student->id => "{$student->name_ar} - كود: {$student->code}"];
-                                            })
-                                            ->toArray();
-                                    })
-                                    ->createOptionForm([
-                                        Forms\Components\Grid::make(2)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('name_ar')
-                                                    ->label('اسم الطالب (عربي)')
-                                                    ->required()
-                                                    ->maxLength(255),
-                                                Forms\Components\TextInput::make('name_en')
-                                                    ->label('اسم الطالب (إنجليزي)')
-                                                    ->maxLength(255),
-                                            ]),
-                                        Forms\Components\Grid::make(3)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('code')
-                                                    ->label('كود الطالب')
-                                                    ->required()
-                                                    ->unique('students', 'code')
-                                                    ->maxLength(50),
-                                                Forms\Components\TextInput::make('student_number')
-                                                    ->label('رقم الطالب')
-                                                    ->unique('students', 'student_number')
-                                                    ->maxLength(50),
-                                                Forms\Components\Select::make('gender')
-                                                    ->label('الجنس')
-                                                    ->options([
-                                                        'male' => 'ذكر',
-                                                        'female' => 'أنثى',
-                                                    ])
-                                                    ->required(),
-                                            ]),
-                                        Forms\Components\DatePicker::make('date_of_birth')
-                                            ->label('تاريخ الميلاد')
-                                            ->required(),
-                                        Forms\Components\TextInput::make('national_id')
-                                            ->label('رقم الهوية')
-                                            ->unique('students', 'national_id')
-                                            ->maxLength(20),
-                                        Forms\Components\Toggle::make('is_active')
-                                            ->label('نشط')
-                                            ->default(true),
-                                    ])
-                                    ->createOptionAction(function (Forms\Components\Actions\Action $action) {
-                                        return $action
-                                            ->modalHeading('إضافة طالب جديد')
-                                            ->modalSubmitActionLabel('إضافة')
-                                            ->modalCancelActionLabel('إلغاء');
-                                    })
-                                    ->required()
-                                    ->distinct(),
-                                
-                                Forms\Components\Toggle::make('is_primary')
-                                    ->label('ولي أمر رئيسي')
-                                    ->default(true)
-                                    ->helperText('هل هذا الولي هو المسؤول الرئيسي عن هذا الطالب؟'),
-                            ])
-                            ->columns(2)
-                            ->collapsible()
-                            ->cloneable()
-                            ->minItems(0)
-                            ->maxItems(10)
-                            ->addActionLabel('إضافة طالب آخر')
-                            ->deleteActionLabel('إزالة')
-                            ->reorderableWithButtons()
-                            ->itemLabel(function (array $state): ?string {
-                                if (!isset($state['student_id'])) {
-                                    return 'طالب جديد';
-                                }
-                                
-                                $student = Student::find($state['student_id']);
-                                if (!$student) {
-                                    return 'طالب غير موجود';
-                                }
-                                
-                                $primaryText = ($state['is_primary'] ?? false) ? ' (رئيسي)' : '';
-                                return "{$student->name_ar} - كود: {$student->code}{$primaryText}";
-                            }),
+                            ->multiple()
+                            ->searchable()
+                            ->relationship('students', 'name_ar')
+                            ->options(function () {
+                                return Student::query()
+                                    ->where('school_id', auth()->user()->school_id ?? 1)
+                                    ->where('is_active', true)
+                                    ->pluck('name_ar', 'id');
+                            })
+                            ->preload()
+                            ->helperText('اختر الطلاب الموجودين فقط لربطهم بولي الأمر'),
                     ])
                     ->collapsible()
                     ->collapsed(false),
@@ -217,6 +131,10 @@ class GuardianResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('school.name_ar')
+                    ->label('المدرسة')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name_ar')
                     ->label('الاسم')
                     ->searchable()
@@ -241,6 +159,11 @@ class GuardianResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('school_id')
+                    ->label('المدرسة')
+                    ->relationship('school', 'name_ar')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\SelectFilter::make('relationship')
                     ->label('صلة القرابة')
                     ->options([
@@ -283,5 +206,29 @@ class GuardianResource extends Resource
             'create' => Pages\CreateGuardian::route('/create'),
             'edit' => Pages\EditGuardian::route('/{record}/edit'),
         ];
+    }
+
+    public static function handleRecordCreation(array $data): Model
+    {
+        $guardian = Guardian::create(collect($data)->except(['student_ids'])->toArray());
+
+        // ربط الطلاب الموجودين فقط
+        if (!empty($data['student_ids'])) {
+            $guardian->students()->attach($data['student_ids']);
+        }
+
+        return $guardian;
+    }
+
+    public static function handleRecordUpdate(Model $record, array $data): Model
+    {
+        $record->update(collect($data)->except(['student_ids'])->toArray());
+
+        // مزامنة الطلاب الموجودين فقط
+        if (isset($data['student_ids'])) {
+            $record->students()->sync($data['student_ids']);
+        }
+
+        return $record;
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\StudentResource\Pages;
 use App\Filament\Resources\StudentResource\RelationManagers;
 use App\Models\Student;
+use App\Models\Branch;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -29,23 +30,62 @@ class StudentResource extends Resource
     
     protected static ?int $navigationSort = 1;
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make('معلومات الطالب الأساسية')
                     ->schema([
+                      
+                        Forms\Components\Select::make('school_id')
+                            ->label('المدرسة')
+                            ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                            ->default(auth()->user()?->school_id)
+                            ->disabled(fn () => auth()->user()?->school_id !== null)
+                            ->required()
+                            ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null))
+                            ->reactive(),
+                            Forms\Components\Select::make('branch_id')
+                                ->label('الفرع')
+                                ->options(function (callable $get) {
+                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
+                                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                })
+                                ->required()
+                                ->searchable()
+                                ->preload(),
                         Forms\Components\Grid::make(2)
                             ->schema([
-                                Forms\Components\Select::make('branch_id')
-                                    ->label('الفرع')
-                                    ->relationship('branch', 'name_ar')
-                                    ->required()
-                                    ->searchable(),
-                                Forms\Components\Select::make('school_class_id')
+                              Forms\Components\Select::make('school_class_id')
                                     ->label('الصف')
-                                    ->relationship('schoolClass', 'name_ar')
-                                    ->searchable(),
+                                    ->options(function (callable $get) {
+                                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                        if (!$schoolId) {
+                                            return [];
+                                        }
+
+                                        return \App\Models\GradeClass::where('school_id', $schoolId)
+                                            ->pluck('name_ar', 'id');
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                    ->required()
+                                    ->afterStateUpdated(fn ($state, callable $set) => $set('section_id', null))
                             ]),
                         Forms\Components\Grid::make(2)
                             ->schema([
@@ -130,6 +170,15 @@ class StudentResource extends Resource
                 Forms\Components\Toggle::make('is_active')
                     ->label('نشط')
                     ->default(true),
+                Forms\Components\View::make('student-map-picker')
+                    ->view('filament.forms.components.student-map-picker')
+                    ->afterStateUpdated(function ($state, callable $set) {
+                    if (isset($state['lat']) && isset($state['lng'])) {
+                    $set('latitude', $state['lat']);
+                    $set('longitude', $state['lng']);
+                }
+                }),
+
             ]);
     }
 

@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('system_settings', function (Blueprint $table) {
             $table->id('sys_id');
             $table->string('sys_earlyexit')->nullable()->comment('إعداد الخروج المبكر');
-            $table->string('sys_earlycall')->nullable()->comment('إعداد المكالمة المبكرة');
-            $table->string('sys_return_call')->nullable()->comment('إعداد مكالمة العودة');
+            $table->string('sys_earlycall')->nullable()->comment('إعداد النداء المبكرة');
+            $table->string('sys_return_call')->nullable()->comment('إعداد نداءالعودة');
             $table->string('sys_exit_togat')->nullable()->comment('إعداد خروج التوجات');
             $table->string('sys_cust_code')->nullable()->comment('كود العميل');
             $table->string('sys_cdate')->nullable()->comment('تاريخ الإنشاء');

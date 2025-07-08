@@ -19,4 +19,16 @@ class AcademicBand extends Model
     {
         return $this->belongsTo(EducationLevel::class);
     }
+
+    public function weekDays()
+    {
+        return $this->belongsToMany(WeekDay::class, 'academic_band_week_days', 'academic_band_id', 'week_day_id')
+            ->withPivot(['school_id', 'start_time', 'end_time', 'is_active', 'notes'])
+            ->withTimestamps();
+    }
+
+    public function academicBandWeekDays()
+    {
+        return $this->hasMany(AcademicBandWeekDay::class);
+    }
 }

@@ -35,6 +35,11 @@ class Branch extends Model
     {
         return $this->hasMany(Student::class);
     }
+
+    public function weekDays()
+    {
+        return $this->hasMany(WeekDay::class);
+    }
     
     public function schoolClasses()
     {

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Filament\Resources\SystemSettingResource\Pages;
 
-use Filament\Pages\Page;
+use App\Filament\Resources\SystemSettingResource;
+use Filament\Resources\Pages\Page;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -16,20 +17,17 @@ class SystemSettings extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static string $view = 'filament.pages.system-settings';
-    protected static ?string $title = 'إعدادات النظام';
+    protected static string $resource = SystemSettingResource::class;
+    protected static string $view = 'filament.resources.system-setting-resource.pages.system-settings';
     
     public function getTitle(): string
     {
         $schoolName = auth()->user()->school->name_ar ?? 'النظام';
         return "إعدادات النظام - {$schoolName}";
     }
-    protected static ?string $navigationLabel = 'إعدادات النظام';
-    protected static ?string $navigationGroup = 'إدارة النظام';
-    protected static ?int $navigationSort = 1;
 
     public ?array $data = [];
+    public bool $saving = false;
 
     public function mount(): void
     {
@@ -42,18 +40,18 @@ class SystemSettings extends Page implements HasForms
             ->schema([
                 Forms\Components\Tabs::make('system_settings')
                     ->tabs([
-                        Forms\Components\Tabs\Tab::make('إعدادات المكالمات')
+                        Forms\Components\Tabs\Tab::make('إعدادات الندائات')
                             ->schema([
-                                Forms\Components\Section::make('أوقات المكالمات')
+                                Forms\Components\Section::make('أوقات الندائات')
                                     ->schema([
                                         Forms\Components\Grid::make(2)
                                             ->schema([
                                                 Forms\Components\TimePicker::make('sys_earlycall')
-                                                    ->label('وقت المكالمة المبكرة')
+                                                    ->label('وقت النداء المبكرة')
                                                     ->default('07:00')
                                                     ->required(),
                                                 Forms\Components\TimePicker::make('sys_return_call')
-                                                    ->label('وقت مكالمة العودة')
+                                                    ->label('وقت نداءالعودة')
                                                     ->default('15:00')
                                                     ->required(),
                                             ]),
@@ -70,10 +68,10 @@ class SystemSettings extends Page implements HasForms
                                             ]),
                                     ]),
                                     
-                                Forms\Components\Section::make('أنواع المكالمات النشطة')
+                                Forms\Components\Section::make('أنواع الندائات النشطة')
                                     ->schema([
                                         Forms\Components\CheckboxList::make('active_call_types')
-                                            ->label('أنواع المكالمات المفعلة')
+                                            ->label('أنواع الندائات المفعلة')
                                             ->options(function () {
                                                 return CallType::pluck('ctype_name_ar', 'ctype_id')->toArray();
                                             })
@@ -162,7 +160,35 @@ class SystemSettings extends Page implements HasForms
         // الحصول على السجل الوحيد للمدرسة أو إنشاؤه إذا لم يكن موجود
         $systemSetting = SystemSetting::getSingleInstanceForSchool($schoolId);
         
-        $weekDays = WeekDay::where('customer_code', $systemSetting->sys_cust_code ?? 'DEFAULT')->get();
+        // جلب أيام الأسبوع من جدول week_days
+        $weekDays = WeekDay::all();
+
+        // إذا لم توجد أيام، إنشاء أيام افتراضية
+        if ($weekDays->isEmpty()) {
+            $defaultDays = [
+                ['day' => 'السبت', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الأحد', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الاثنين', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الثلاثاء', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الأربعاء', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الخميس', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => false],
+                ['day' => 'الجمعة', 'time_from' => '07:00:00', 'time_to' => '15:00:00', 'day_inactive' => true],
+            ];
+            
+            foreach ($defaultDays as $day) {
+                WeekDay::create([
+                    'day' => $day['day'],
+                    'time_from' => $day['time_from'],
+                    'time_to' => $day['time_to'],
+                    'day_inactive' => $day['day_inactive'],
+                    'customer_code' => $systemSetting->sys_cust_code ?? 'DEFAULT',
+                ]);
+            }
+            
+            // إعادة جلب البيانات بعد الإنشاء
+            $weekDays = WeekDay::where('customer_code', $systemSetting->sys_cust_code ?? 'DEFAULT')->get();
+        }
+        
         $activeCallTypes = CallType::where('school_id', $schoolId)->where('ctype_isactive', true)->pluck('ctype_id')->toArray();
 
         return [
@@ -174,9 +200,10 @@ class SystemSettings extends Page implements HasForms
             'active_call_types' => $activeCallTypes,
             'week_days' => $weekDays->map(function ($day) {
                 return [
+                    'day_id' => $day->day_id,
                     'day_name' => $day->day,
-                    'start_time' => $day->time_from,
-                    'end_time' => $day->time_to,
+                    'start_time' => substr($day->time_from, 0, 5), // تحويل من HH:MM:SS إلى HH:MM
+                    'end_time' => substr($day->time_to, 0, 5),     // تحويل من HH:MM:SS إلى HH:MM
                     'is_active' => !$day->day_inactive,
                 ];
             })->toArray(),
@@ -188,6 +215,7 @@ class SystemSettings extends Page implements HasForms
 
     public function save(): void
     {
+        $this->saving = true;
         $data = $this->form->getState();
 
         try {
@@ -205,7 +233,7 @@ class SystemSettings extends Page implements HasForms
                 'sys_udate' => now(),
             ]);
 
-            // حفظ أنواع المكالمات النشطة للمدرسة
+            // حفظ أنواع الندائات النشطة للمدرسة
             if (isset($data['active_call_types'])) {
                 CallType::where('school_id', $schoolId)->update(['ctype_isactive' => false]);
                 CallType::where('school_id', $schoolId)
@@ -238,17 +266,10 @@ class SystemSettings extends Page implements HasForms
                 ->body('حدث خطأ أثناء حفظ الإعدادات: ' . $e->getMessage())
                 ->danger()
                 ->send();
+        } finally {
+            $this->saving = false;
         }
     }
 
-    public function getActions(): array
-    {
-        return [
-            Forms\Components\Actions\Action::make('save')
-                ->label('حفظ جميع الإعدادات')
-                ->color('primary')
-                ->action('save')
-                ->keyBindings(['mod+s']),
-        ];
-    }
+    
 }

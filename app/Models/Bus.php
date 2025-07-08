@@ -12,8 +12,13 @@ class Bus extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'branch_id',
+        'driver_id',      // أضف هنا
+        'supervisor_id', 
         'number',
+        "plate_number", 
+
         'driver_name',
         'driver_phone',
         'capacity',
@@ -26,6 +31,21 @@ class Bus extends Model
         'is_active' => 'boolean',
     ];
 
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'school_id');
+    }
+
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
     // العلاقات
     public function branch(): BelongsTo
     {
@@ -35,6 +55,11 @@ class Bus extends Model
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
+    }
+
+    public function busRoutes()
+    {
+        return $this->hasMany(BusRoute::class);
     }
 
     // Accessors

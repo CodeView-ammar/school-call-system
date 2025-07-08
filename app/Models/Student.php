@@ -41,7 +41,11 @@ class Student extends Model
         'date_of_birth' => 'date',
         'is_active' => 'boolean',
     ];
-    
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
@@ -59,9 +63,9 @@ class Student extends Model
     
     public function guardians()
     {
-        return $this->belongsToMany(Guardian::class, 'student_guardians')
-            ->withPivot('is_primary')
-            ->withTimestamps();
+        return $this->belongsToMany(Guardian::class, 'guardian_student')
+            ->withTimestamps()
+            ->withPivot('is_primary');
     }
     
     public function primaryGuardian()

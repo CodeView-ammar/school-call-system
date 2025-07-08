@@ -11,6 +11,7 @@ class Guardian extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'name_ar',
         'name_en',
         'phone',
@@ -27,11 +28,16 @@ class Guardian extends Model
     ];
 
     // العلاقات
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function students(): BelongsToMany
     {
-        return $this->belongsToMany(Student::class, 'student_guardians')
-            ->withPivot('is_primary')
-            ->withTimestamps();
+        return $this->belongsToMany(Student::class, 'guardian_student')
+            ->withTimestamps()
+            ->withPivot('is_primary');
     }
 
     public function primaryStudents(): BelongsToMany

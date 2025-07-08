@@ -22,6 +22,7 @@ class SystemSettingResource extends Resource
     protected static ?string $modelLabel = 'إعداد نظام';
     protected static ?string $pluralModelLabel = 'إعدادات النظام';
     protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static bool $shouldRegisterNavigation = true;
 
     public static function form(Form $form): Form
     {
@@ -87,9 +88,7 @@ class SystemSettingResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSystemSettings::route('/'),
-            'create' => Pages\CreateSystemSetting::route('/create'),
-            'edit' => Pages\EditSystemSetting::route('/{record}/edit'),
+            'index' => Pages\SystemSettings::route('/'),
         ];
     }
 }

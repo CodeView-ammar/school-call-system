@@ -21,7 +21,7 @@ class CallTypeResource extends Resource
     protected static ?string $pluralModelLabel = 'أنواع الندائات';
 
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
 
@@ -31,7 +31,27 @@ class CallTypeResource extends Resource
 
         return $query;
     }
-
+     
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
     public static function form(Form $form): Form
     {
 
@@ -120,8 +140,8 @@ class CallTypeResource extends Resource
     {
         return [
             'index' => Pages\ListCallTypes::route('/'),
-            'create' => Pages\CreateCallType::route('/create'),
-            'edit' => Pages\EditCallType::route('/{record}/edit'),
+            // 'create' => Pages\CreateCallType::route('/create'),
+            // 'edit' => Pages\EditCallType::route('/{record}/edit'),
         ];
     }
 }

@@ -32,6 +32,17 @@ class BusResource extends Resource
     
     protected static ?int $navigationSort = 1;
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -40,6 +51,41 @@ class BusResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make(2)
                             ->schema([
+                Forms\Components\Select::make('school_id')
+                                ->label('المدرسة')
+                                ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                                ->default(auth()->user()?->school_id)
+                                // ->disabled(fn () => auth()->user()?->school_id !== null)
+                                ->hidden(fn () => auth()->user()?->school_id !== null)
+                                ->required()
+                                ->reactive()
+                                ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)),
+
+                            Forms\Components\Select::make('branch_id')
+                                ->label('الفرع')
+                                ->options(function (callable $get) {
+                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
+                                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                })
+                                ->required()
+                                ->searchable()
+                                ->preload(),
+                        Forms\Components\Select::make('driver_id')
+                            ->label('السائق')
+                            ->options(\App\Models\User::where('role', 'driver')->pluck('name', 'id'))
+                            ->searchable()
+                            ->required(false)
+                            ->helperText('ملاحظة: عند إضافة مستخدم كسائق، تأكد من منحه صلاحيات السائق في النظام.'),
+
+                        Forms\Components\Select::make('supervisor_id')
+                            ->label('المشرف')
+                            ->options(\App\Models\User::where('role', 'supervisor')->pluck('name', 'id'))
+                            ->searchable()
+                            ->required(false)
+                            ->helperText('ملاحظة: عند إضافة مستخدم كمشرف، تأكد من منحه صلاحيات المشرف في النظام.'),
                                 Forms\Components\TextInput::make('number')
                                     ->label('رقم الحافلة')
                                     ->required()
@@ -52,13 +98,7 @@ class BusResource extends Resource
                                     ->unique(ignoreRecord: true)
                                     ->maxLength(20),
                                     
-                                Forms\Components\Select::make('branch_id')
-                                    ->label('الفرع')
-                                    ->options(Branch::query()->pluck('name_ar', 'id'))
-                                    ->required()
-                                    ->searchable()
-                                    ->preload(),
-                                    
+
                                 Forms\Components\TextInput::make('capacity')
                                     ->label('السعة')
                                     ->numeric()
@@ -158,7 +198,12 @@ class BusResource extends Resource
                     ->sortable()
                     ->badge()
                     ->color('info'),
-                    
+                Tables\Columns\TextColumn::make('school.name_ar')
+                    ->label('المدرسة')
+                    ->searchable()
+                    ->sortable()
+                    ->visible(fn () => auth()->user()?->school_id === null),
+                
                 Tables\Columns\TextColumn::make('branch.name_ar')
                     ->label('الفرع')
                     ->searchable()
@@ -170,12 +215,7 @@ class BusResource extends Resource
                     ->badge()
                     ->color('success'),
                     
-                Tables\Columns\TextColumn::make('students_count')
-                    ->label('عدد الطلاب')
-                    ->counts('students')
-                    ->alignCenter()
-                    ->badge()
-                    ->color('warning'),
+
                     
                 Tables\Columns\TextColumn::make('available_seats')
                     ->label('المقاعد المتاحة')
