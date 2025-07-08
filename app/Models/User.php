@@ -93,12 +93,12 @@ class User extends Authenticatable
 
     public function getIsAdminAttribute(): bool
     {
-        return $this->hasRole('super-admin');
+        return $this->hasRole('super_admin');
     }
 
     public function getIsSchoolAdminAttribute(): bool
     {
-        return $this->hasRole('school-admin');
+        return $this->hasRole('school_admin');
     }
 
     public function getIsSupervisorAttribute(): bool

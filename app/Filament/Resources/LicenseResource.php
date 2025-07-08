@@ -22,6 +22,31 @@ class LicenseResource extends Resource
     protected static ?string $modelLabel = 'ترخيص';
     protected static ?string $pluralModelLabel = 'التراخيص';
     protected static ?string $navigationGroup = 'إدارة النظام';
+// إظهار الصفحة للمدير الأساسي فقط
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+    
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
 
     public static function form(Form $form): Form
     {

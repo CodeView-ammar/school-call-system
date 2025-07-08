@@ -17,6 +17,7 @@ class GradeClass extends Model
         'name_en',
         'code',
         'is_active',
+        "school_id",    
     ];
 
     protected $casts = [
@@ -34,6 +35,10 @@ class GradeClass extends Model
         return $this->hasMany(Student::class, 'school_class_id');
     }
 
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
+    }
     // Accessors
     public function getFullNameAttribute(): string
     {

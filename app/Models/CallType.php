@@ -18,7 +18,7 @@ class CallType extends Model
         'ctype_cdate',
         'ctype_udate',
         'ctype_isactive',
-        'ctype_cust_code',
+        'school_id',
     ];
 
     protected $casts = [
@@ -31,5 +31,9 @@ class CallType extends Model
     public function scopeActive($query)
     {
         return $query->where('ctype_isactive', 1);
+    }
+    public function school()
+    {
+        return $this->belongsTo(School::class, 'school_id');
     }
 }

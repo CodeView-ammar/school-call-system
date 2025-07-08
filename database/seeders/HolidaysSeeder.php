@@ -11,38 +11,38 @@ class HolidaysSeeder extends Seeder
     {
         $holidays = [
             [
-                'holiday_name_ar' => 'عيد الفطر المبارك',
-                'holiday_name_en' => 'Eid Al-Fitr',
-                'holiday_from_date' => '2025-04-09',
-                'holiday_to_date' => '2025-04-12',
-                'holiday_isactive' => '1',
+                'name_ar' => 'عيد الفطر المبارك',
+                'name_en' => 'Eid Al-Fitr',
+                'from_date' => '2025-04-09',
+                'to_date' => '2025-04-12',
+                'isactive' => '1',
             ],
             [
-                'holiday_name_ar' => 'عيد الأضحى المبارك',
-                'holiday_name_en' => 'Eid Al-Adha',
-                'holiday_from_date' => '2025-06-15',
-                'holiday_to_date' => '2025-06-18',
-                'holiday_isactive' => '1',
+                'name_ar' => 'عيد الأضحى المبارك',
+                'name_en' => 'Eid Al-Adha',
+                'from_date' => '2025-06-15',
+                'to_date' => '2025-06-18',
+                'isactive' => '1',
             ],
             [
-                'holiday_name_ar' => 'اليوم الوطني السعودي',
-                'holiday_name_en' => 'Saudi National Day',
-                'holiday_from_date' => '2025-09-23',
-                'holiday_to_date' => '2025-09-23',
-                'holiday_isactive' => '1',
+                'name_ar' => 'اليوم الوطني السعودي',
+                'name_en' => 'Saudi National Day',
+                'from_date' => '2025-09-23',
+                'to_date' => '2025-09-23',
+                'isactive' => '1',
             ],
             [
-                'holiday_name_ar' => 'إجازة نصف العام',
-                'holiday_name_en' => 'Mid-Year Break',
-                'holiday_from_date' => '2025-01-20',
-                'holiday_to_date' => '2025-01-31',
-                'holiday_isactive' => '1',
+                'name_ar' => 'إجازة نصف العام',
+                'name_en' => 'Mid-Year Break',
+                'from_date' => '2025-01-20',
+                'to_date' => '2025-01-31',
+                'isactive' => '1',
             ],
         ];
 
         foreach ($holidays as $holiday) {
             Holiday::firstOrCreate(
-                ['holiday_name_ar' => $holiday['holiday_name_ar']],
+                ['name_ar' => $holiday['name_ar']],
                 $holiday
             );
         }

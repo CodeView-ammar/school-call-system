@@ -119,4 +119,8 @@ class School extends Model
     {
         $this->attributes['branch_settings'] = json_encode($value);
     }
+    public function callTypes()
+    {
+        return $this->hasMany(CallType::class, 'school_id');
+    }
 }

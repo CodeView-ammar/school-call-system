@@ -16,7 +16,7 @@ class SchoolAccessMiddleware
         $user = auth()->user();
         
         // السماح للأدمن العام بالوصول لجميع البيانات
-        if ($user && $user->hasRole('super-admin')) {
+        if ($user && $user->hasRole('super_admin')) {
             return $next($request);
         }
 

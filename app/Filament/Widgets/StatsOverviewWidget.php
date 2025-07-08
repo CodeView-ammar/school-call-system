@@ -17,7 +17,7 @@ class StatsOverviewWidget extends BaseWidget
         $user = Auth::user();
         
         // إحصائيات للمدير العام فقط
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return [
                 Stat::make('إجمالي المدارس', School::count())
                     ->description('المدارس المسجلة في النظام')

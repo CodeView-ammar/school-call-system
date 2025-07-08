@@ -33,7 +33,7 @@ class AttendanceChart extends ChartWidget
             $query = Attendance::whereDate('date', $date);
             
             // تصفية حسب صلاحيات المستخدم
-            if (!$user->hasRole('super-admin')) {
+            if (!$user->hasRole('super_admin')) {
                 $schoolIds = $user->schools->pluck('id');
                 $query->whereIn('student_id', function($subQuery) use ($schoolIds) {
                     $subQuery->select('id')->from('students')

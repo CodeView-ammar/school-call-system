@@ -71,6 +71,6 @@ class LatestSchoolsWidget extends BaseWidget
     
     public static function canView(): bool
     {
-        return Auth::user()->hasRole('super-admin');
+        return Auth::user()->hasRole('super_admin');
     }
 }

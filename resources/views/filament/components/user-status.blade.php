@@ -8,8 +8,11 @@
         </div>
         <div>
             <div class="font-medium text-gray-900 dark:text-white">
-                {{ auth()->user()->name_ar ?? auth()->user()->name }}
+                {{ auth()->user()->name_ar ?? auth()->user()->name }} 
             </div>
+            <p>
+                اسم المدرسة: {{ auth()->user()->school ? auth()->user()->school->name_ar : 'مدير النظام' }}
+            </p>    
             <div class="text-xs text-gray-500 dark:text-gray-400">
                 {{ auth()->user()->email }}
             </div>

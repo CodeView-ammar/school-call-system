@@ -9,12 +9,9 @@ use Filament\Resources\Pages\EditRecord;
 class EditBranch extends EditRecord
 {
     protected static string $resource = BranchResource::class;
-<<<<<<< HEAD
-=======
     
     public $latitude;
     public $longitude;
->>>>>>> 28095241346b047a3ed5b77266e70574ffa1bf35
 
     protected function getHeaderActions(): array
     {
@@ -22,8 +19,6 @@ class EditBranch extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
-<<<<<<< HEAD
-=======
     
     protected function mutateFormDataBeforeFill(array $data): array
     {
@@ -32,5 +27,12 @@ class EditBranch extends EditRecord
         
         return $data;
     }
->>>>>>> 28095241346b047a3ed5b77266e70574ffa1bf35
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (auth()->user()?->school_id) {
+            $data['school_id'] = auth()->user()->school_id;
+        }
+        return $data;
+    }
 }

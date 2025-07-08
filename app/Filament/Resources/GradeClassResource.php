@@ -25,9 +25,18 @@ class GradeClassResource extends Resource
     protected static ?string $modelLabel = 'الصف الدراسي';
     
     protected static ?string $pluralModelLabel = 'الصفوف الدراسية';
-    
+    protected static ?int $navigationSort = 2;
     protected static ?string $navigationLabel = 'الصفوف الدراسية';
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
 
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
     public static function form(Form $form): Form
     {
         return $form
@@ -73,6 +82,17 @@ class GradeClassResource extends Resource
                                     ->default(true)
                                     ->columnSpan(1),
                             ]),
+                            auth()->user()?->school_id === null
+                    ? Forms\Components\Select::make('school_id')
+                        ->label('المدرسة')
+                        ->relationship('school', 'name_ar')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                    : Forms\Components\Hidden::make('school_id')
+                        ->default(auth()->user()->school_id)
+                        ->dehydrated(true)
+                        ->required(),
                     ]),
             ]);
     }
@@ -119,6 +139,16 @@ class GradeClassResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime('Y-m-d H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+             Tables\Columns\TextColumn::make('school.name_ar')
+                ->label('المدرسة')
+                ->searchable()
+                ->sortable()
+                ->visible(fn () => auth()->user()?->school_id === null),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('تاريخ الإنشاء')
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

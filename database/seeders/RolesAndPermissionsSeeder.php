@@ -91,11 +91,11 @@ class RolesAndPermissionsSeeder extends Seeder
         // إنشاء الأدوار
         
         // 1. الأدمن العام - يستطيع الوصول لجميع البيانات
-        $superAdmin = Role::create(['name' => 'super-admin']);
+        $superAdmin = Role::create(['name' => 'super_admin']);
         $superAdmin->givePermissionTo(Permission::all());
 
         // 2. أدمن المدرسة - يدير مدرسة واحدة فقط
-        $schoolAdmin = Role::create(['name' => 'school-admin']);
+        $schoolAdmin = Role::create(['name' => 'school_admin']);
         $schoolAdmin->givePermissionTo([
             'view_dashboard',
             'view_schools',
@@ -171,7 +171,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'email_verified_at' => now()
         ]);
 
-        $adminUser->assignRole('super-admin');
+        $adminUser->assignRole('super_admin');
 
         $this->command->info('تم إنشاء الأدوار والصلاحيات والمستخدم الأدمن بنجاح');
         $this->command->info('بيانات الدخول: admin@smartcall.com / admin123');

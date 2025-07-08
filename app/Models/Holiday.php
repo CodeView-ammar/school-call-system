@@ -10,43 +10,47 @@ class Holiday extends Model
     use HasFactory;
 
     protected $fillable = [
-        'holiday_name_ar',
-        'holiday_name_en',
-        'holiday_from_date',
-        'holiday_to_date',
-        'holiday_isactive',
-        'holiday_cust_code',
-        'holiday_cdate',
-        'holiday_udate',
+        'name_ar',               // الاسم العربي
+        'name_en',               // الاسم الإنجليزي
+        'from_date',             // تاريخ البداية
+        'to_date',               // تاريخ النهاية
+        'is_active',             // حالة النشاط
+        'created_at',            // تاريخ الإنشاء
+        'updated_at',            // تاريخ التحديث
+        'school_id',             // إضافة علاقة مع المدرسة
     ];
 
     protected $casts = [
-        'holiday_from_date' => 'date',
-        'holiday_to_date' => 'date',
-        'holiday_cdate' => 'datetime',
-        'holiday_udate' => 'datetime',
-        'holiday_isactive' => 'boolean',
+        'from_date' => 'date',
+        'to_date' => 'date',
+        'is_active' => 'boolean',
     ];
+
+    // علاقة مع المدرسة
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     // نطاقات
     public function scopeActive($query)
     {
-        return $query->where('holiday_isactive', '1');
+        return $query->where('is_active', true);
     }
 
     public function scopeCurrent($query)
     {
         $today = now()->toDateString();
-        return $query->where('holiday_from_date', '<=', $today)
-                    ->where('holiday_to_date', '>=', $today);
+        return $query->where('from_date', '<=', $today)
+                    ->where('to_date', '>=', $today);
     }
 
     // دوال مساعدة
     public function isCurrentlyActive()
     {
         $today = now()->toDateString();
-        return $this->holiday_isactive && 
-               $this->holiday_from_date <= $today && 
-               $this->holiday_to_date >= $today;
+        return $this->is_active && 
+               $this->from_date <= $today && 
+               $this->to_date >= $today;
     }
 }

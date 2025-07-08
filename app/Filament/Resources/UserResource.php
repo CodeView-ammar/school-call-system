@@ -91,17 +91,11 @@ class UserResource extends Resource
                             ->relationship('school', 'name_ar')
                             ->searchable()
                             ->preload(),
-                        Forms\Components\Select::make('roles')
-                            ->label('الأدوار')
-                            ->relationship('roles', 'name')
-                            ->multiple()
-                            ->preload()
-                            ->options([
-                                'super_admin' => 'مدير أساسي',
-                                'school_admin' => 'مدير مدرسة',
-                                'teacher' => 'معلم',
-                                'supervisor' => 'مشرف',
-                            ]),
+                      Forms\Components\Select::make('roles')
+                        ->label('الأدوار')
+                        ->relationship('roles', 'name')
+                        ->multiple()
+                        ->preload(),
                         Forms\Components\Toggle::make('is_active')
                             ->label('نشط')
                             ->default(true),
