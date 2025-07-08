@@ -19,6 +19,12 @@ class SystemSettings extends Page implements HasForms
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static string $view = 'filament.pages.system-settings';
     protected static ?string $title = 'إعدادات النظام';
+    
+    public function getTitle(): string
+    {
+        $schoolName = auth()->user()->school->name_ar ?? 'النظام';
+        return "إعدادات النظام - {$schoolName}";
+    }
     protected static ?string $navigationLabel = 'إعدادات النظام';
     protected static ?string $navigationGroup = 'إدارة النظام';
     protected static ?int $navigationSort = 1;
@@ -150,9 +156,14 @@ class SystemSettings extends Page implements HasForms
 
     protected function getFormData(): array
     {
-        $systemSetting = SystemSetting::first();
-        $weekDays = WeekDay::all();
-        $activeCallTypes = CallType::where('ctype_isactive', true)->pluck('ctype_id')->toArray();
+        // الحصول على المدرسة الحالية
+        $schoolId = auth()->user()->school_id ?? 1;
+        
+        // الحصول على السجل الوحيد للمدرسة أو إنشاؤه إذا لم يكن موجود
+        $systemSetting = SystemSetting::getSingleInstanceForSchool($schoolId);
+        
+        $weekDays = WeekDay::where('customer_code', $systemSetting->sys_cust_code ?? 'DEFAULT')->get();
+        $activeCallTypes = CallType::where('school_id', $schoolId)->where('ctype_isactive', true)->pluck('ctype_id')->toArray();
 
         return [
             'sys_earlycall' => $systemSetting?->sys_earlycall ?? '07:00',
@@ -180,29 +191,31 @@ class SystemSettings extends Page implements HasForms
         $data = $this->form->getState();
 
         try {
-            // حفظ إعدادات النظام الرئيسية
-            SystemSetting::updateOrCreate(
-                ['sys_id' => 1],
-                [
-                    'sys_earlycall' => $data['sys_earlycall'],
-                    'sys_return_call' => $data['sys_return_call'],
-                    'sys_earlyexit' => $data['sys_earlyexit'],
-                    'sys_exit_togat' => $data['sys_exit_togat'],
-                    'sys_cust_code' => $data['sys_cust_code'],
-                    'sys_udate' => now(),
-                ]
-            );
+            // الحصول على المدرسة الحالية
+            $schoolId = auth()->user()->school_id ?? 1;
+            
+            // الحصول على السجل الخاص بالمدرسة وتحديثه
+            $systemSetting = SystemSetting::getSingleInstanceForSchool($schoolId);
+            $systemSetting->update([
+                'sys_earlycall' => $data['sys_earlycall'],
+                'sys_return_call' => $data['sys_return_call'],
+                'sys_earlyexit' => $data['sys_earlyexit'],
+                'sys_exit_togat' => $data['sys_exit_togat'],
+                'sys_cust_code' => $data['sys_cust_code'],
+                'sys_udate' => now(),
+            ]);
 
-            // حفظ أنواع المكالمات النشطة
+            // حفظ أنواع المكالمات النشطة للمدرسة
             if (isset($data['active_call_types'])) {
-                CallType::query()->update(['ctype_isactive' => false]);
-                CallType::whereIn('ctype_id', $data['active_call_types'])
+                CallType::where('school_id', $schoolId)->update(['ctype_isactive' => false]);
+                CallType::where('school_id', $schoolId)
+                        ->whereIn('ctype_id', $data['active_call_types'])
                         ->update(['ctype_isactive' => true]);
             }
 
-            // حفظ أيام الأسبوع
+            // حفظ أيام الأسبوع للمدرسة
             if (isset($data['week_days'])) {
-                WeekDay::truncate();
+                WeekDay::where('customer_code', $data['sys_cust_code'] ?? 'DEFAULT')->delete();
                 foreach ($data['week_days'] as $weekDay) {
                     WeekDay::create([
                         'day' => $weekDay['day_name'],

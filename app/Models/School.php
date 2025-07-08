@@ -123,4 +123,12 @@ class School extends Model
     {
         return $this->hasMany(CallType::class, 'school_id');
     }
+    
+    /**
+     * العلاقة مع إعدادات النظام
+     */
+    public function systemSetting()
+    {
+        return $this->hasOne(SystemSetting::class);
+    }
 }
