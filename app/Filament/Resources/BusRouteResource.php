@@ -248,7 +248,8 @@ class BusRouteResource extends Resource
                 Tables\Columns\TextColumn::make('school.name_ar')
                     ->label('المدرسة')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn () => auth()->user()?->school_id === null),
                     
                 Tables\Columns\TextColumn::make('bus.number')
                     ->label('رقم الحافلة')

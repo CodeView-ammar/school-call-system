@@ -38,68 +38,67 @@ class AcademicBandWeekDayResource extends Resource
 
         return $query;
     }
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\Select::make('school_id')
+                ->label('المدرسة')
+                ->relationship('school', 'name_ar')
+                ->required()
+                ->default(fn () => auth()->user()?->school_id)
+                ->disabled(fn () => auth()->user()?->school_id !== null),
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('school_id')
-                    ->label('المدرسة')
-                    ->relationship('school', 'name_ar')
-                    ->required()
-                    ->default(fn () => auth()->user()?->school_id)
-                    ->disabled(fn () => auth()->user()?->school_id !== null),
+            Forms\Components\Select::make('academic_band_id')
+                ->label('الفرقة الدراسية')
+                ->options(function (callable $get) {
+                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                    if (!$schoolId) return [];
+                    
+                    return AcademicBand::where('school_id', $schoolId)
+                        ->where('is_active', true)
+                        ->pluck('name_ar', 'id');
+                })
+                ->required()
+                ->searchable(),
 
-                Forms\Components\Select::make('academic_band_id')
-                    ->label('الفرقة الدراسية')
-                    ->options(function (callable $get) {
-                        $schoolId = $get('school_id') ?? auth()->user()?->school_id;
-                        if (!$schoolId) return [];
-                        
-                        return AcademicBand::where('school_id', $schoolId)
-                            ->where('is_active', true)
-                            ->pluck('name_ar', 'id');
-                    })
-                    ->required()
-                    ->searchable(),
+            Forms\Components\Select::make('week_day_id')
+                ->label('يوم الأسبوع')
+                ->options(function (callable $get) {
+                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                    if (!$schoolId) return [];
+                    
+                    return WeekDay::where('school_id', $schoolId)
+                        ->where('day_inactive', '!=', 1)
+                        ->pluck('day', 'day_id');
+                })
+                ->required()
+                ->searchable(),
 
-                Forms\Components\Select::make('week_day_id')
-                    ->label('يوم الأسبوع')
-                    ->options(function (callable $get) {
-                        $schoolId = $get('school_id') ?? auth()->user()?->school_id;
-                        if (!$schoolId) return [];
-                        
-                        return WeekDay::where('school_id', $schoolId)
-                            ->where('day_inactive', '!=', 1)
-                            ->pluck('day', 'day_id');
-                    })
-                    ->required()
-                    ->searchable(),
+            Forms\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\TimePicker::make('start_time')
+                        ->label('وقت البداية')
+                        ->seconds(false)
+                        ->required(),
 
-                Forms\Components\Grid::make(2)
-                    ->schema([
-                        Forms\Components\TimePicker::make('start_time')
-                            ->label('وقت البداية')
-                            ->seconds(false)
-                            ->required(),
+                    Forms\Components\TimePicker::make('end_time')
+                        ->label('وقت النهاية')
+                        ->seconds(false)
+                        ->required()
+                        ->after('start_time'),
+                ]),
 
-                        Forms\Components\TimePicker::make('end_time')
-                            ->label('وقت النهاية')
-                            ->seconds(false)
-                            ->required()
-                            ->after('start_time'),
-                    ]),
+            Forms\Components\Toggle::make('is_active')
+                ->label('نشط')
+                ->default(true),
 
-                Forms\Components\Toggle::make('is_active')
-                    ->label('نشط')
-                    ->default(true),
-
-                Forms\Components\Textarea::make('notes')
-                    ->label('ملاحظات')
-                    ->rows(3)
-                    ->columnSpanFull(),
-            ]);
-    }
+            Forms\Components\Textarea::make('notes')
+                ->label('ملاحظات')
+                ->rows(3)
+                ->columnSpanFull(),
+        ]);
+}
 
     public static function table(Table $table): Table
     {

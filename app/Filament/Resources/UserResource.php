@@ -30,29 +30,39 @@ class UserResource extends Resource
     protected static ?string $navigationGroup = 'إدارة النظام';
     
     // إظهار الصفحة للمدير الأساسي فقط
-    public static function canViewAny(): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
+    // public static function canViewAny(): bool
+    // {
+    //     return auth()->user()?->hasRole('super_admin') ?? false;
+    // }
     
-    public static function canCreate(): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
+    // public static function canCreate(): bool
+    // {
+    //     return auth()->user()?->hasRole('super_admin') ?? false;
+    // }
     
-    public static function canEdit($record): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
+    // public static function canEdit($record): bool
+    // {
+    //     return auth()->user()?->hasRole('super_admin') ?? false;
+    // }
     
-    public static function canDelete($record): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
+    // public static function canDelete($record): bool
+    // {
+    //     return auth()->user()?->hasRole('super_admin') ?? false;
+    // }
     
-    public static function canDeleteAny(): bool
+    // public static function canDeleteAny(): bool
+    // {
+    //     return auth()->user()?->hasRole('super_admin') ?? false;
+    // }
+    public static function getEloquentQuery(): Builder
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
     }
 
     public static function form(Form $form): Form
@@ -86,11 +96,18 @@ class UserResource extends Resource
                     
                 Forms\Components\Section::make('المدرسة والأدوار')
                     ->schema([
-                        Forms\Components\Select::make('school_id')
-                            ->label('المدرسة')
-                            ->relationship('school', 'name_ar')
-                            ->searchable()
-                            ->preload(),
+                    auth()->user()?->school_id === null
+                    ? Forms\Components\Select::make('school_id')
+                        ->label('المدرسة')
+                        ->relationship('school', 'name_ar')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                    : Forms\Components\Hidden::make('school_id')
+                        ->default(auth()->user()->school_id)
+                        ->dehydrated(true)
+                        ->required(),
+
                       Forms\Components\Select::make('roles')
                         ->label('الأدوار')
                         ->relationship('roles', 'name')
@@ -119,7 +136,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('school.name_ar')
                     ->label('المدرسة')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn () => auth()->user()?->school_id === null),
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('الأدوار')
                     ->badge()

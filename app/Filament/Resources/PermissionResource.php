@@ -4,8 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PermissionResource\Pages;
 use App\Filament\Resources\PermissionResource\RelationManagers;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
+use App\Models\Role;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,7 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Illuminate\Validation\Rule;
 class PermissionResource extends Resource
 {
     protected static ?string $model = Permission::class;
@@ -30,18 +31,40 @@ class PermissionResource extends Resource
     
     protected static ?int $navigationSort = 2;
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make('معلومات الصلاحية')
                     ->schema([
+                    Forms\Components\Select::make('school_id')
+                        ->label('المدرسة')
+                        ->options(\App\Models\School::pluck('name_ar', 'id'))
+                        ->default(auth()->user()?->school_id)
+                        ->disabled(fn () => auth()->user()?->school_id !== null)
+                        ->hidden(fn () => auth()->user()?->school_id !== null)
+                        ->required(),
                         Forms\Components\TextInput::make('name')
-                            ->label('اسم الصلاحية')
-                            ->required()
-                            ->unique(ignoreRecord: true)
-                            ->maxLength(255)
-                            ->helperText('مثال: view_students, edit_schools, manage_buses'),
+                        ->label('اسم الصلاحية')
+                        ->required()
+                        ->maxLength(255)
+                        ->helperText('مثال: view_students, edit_schools, manage_buses')
+                        ->rules([
+                            fn (callable $get) => Rule::unique('permissions', 'name')
+                                ->where(fn ($query) => $query->where('school_id', auth()->user()?->school_id))
+                                ->ignore($get('id')),
+                        ]),
                             
                         Forms\Components\TextInput::make('guard_name')
                             ->label('نوع الحارس')
@@ -70,6 +93,11 @@ class PermissionResource extends Resource
     {
         return $table
             ->columns([
+                 Tables\Columns\TextColumn::make('school.name_ar')
+                ->label('المدرسة')
+                ->searchable()
+                ->sortable()
+                ->visible(fn () => auth()->user()?->school_id === null),
                 Tables\Columns\TextColumn::make('name')
                     ->label('اسم الصلاحية')
                     ->searchable()

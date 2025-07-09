@@ -12,7 +12,7 @@ use App\Models\Student;
 use App\Models\Guardian;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 
 class QuickSetupSeeder extends Seeder
 {

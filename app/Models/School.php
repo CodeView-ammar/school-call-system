@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Role;
+use App\Models\Permission;
 
 class School extends Model
 {
@@ -66,6 +68,18 @@ class School extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    // المستخدمين المرتبطين بالمدرسة
+    public function roles()
+    {
+        return $this->hasMany(Role::class);
+    }
+
+    // الصلاحيات المرتبطة بالمدرسة
+    public function permissions()
+    {
+        return $this->hasMany(Permission::class);
     }
 
     // مدير المدرسة الرئيسي

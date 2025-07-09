@@ -26,7 +26,11 @@ class AcademicBand extends Model
             ->withPivot(['school_id', 'start_time', 'end_time', 'is_active', 'notes'])
             ->withTimestamps();
     }
-
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'academic_band_student')
+            ->withTimestamps();
+    }
     public function academicBandWeekDays()
     {
         return $this->hasMany(AcademicBandWeekDay::class);

@@ -136,8 +136,8 @@ class HolidayResource extends Resource
     {
         return [
             'index' => Pages\ListHolidays::route('/'),
-            'create' => Pages\CreateHoliday::route('/create'),
-            'edit' => Pages\EditHoliday::route('/{record}/edit'),
+            // 'create' => Pages\CreateHoliday::route('/create'),
+            // 'edit' => Pages\EditHoliday::route('/{record}/edit'),
         ];
     }
 }

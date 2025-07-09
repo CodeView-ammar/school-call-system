@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers;
-use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Role;
+use App\Models\Role;
+
 use Spatie\Permission\Models\Permission;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -30,12 +32,30 @@ class RoleResource extends Resource
     
     protected static ?int $navigationSort = 1;
 
+    public static function getEloquentQuery(): Builder
+        {
+            $query = parent::getEloquentQuery();
+
+            if (auth()->user()?->school_id) {
+                $query->where('school_id', auth()->user()->school_id);
+            }
+
+            return $query;
+        }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make('معلومات الدور')
                     ->schema([
+                        Forms\Components\Select::make('school_id')
+                        ->label('المدرسة')
+                        ->options(\App\Models\School::pluck('name_ar', 'id'))
+                        ->default(auth()->user()?->school_id)
+                        ->disabled(fn () => auth()->user()?->school_id !== null)
+                        ->hidden(fn () => auth()->user()?->school_id !== null)
+                        ->required(),
                         Forms\Components\TextInput::make('name')
                             ->label('اسم الدور')
                             ->required()
@@ -70,6 +90,11 @@ class RoleResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('school.name_ar')
+                ->label('المدرسة')
+                ->searchable()
+                ->sortable()
+                ->visible(fn () => auth()->user()?->school_id === null),
                 Tables\Columns\TextColumn::make('name')
                     ->label('اسم الدور')
                     ->searchable()

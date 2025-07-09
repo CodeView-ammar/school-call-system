@@ -70,22 +70,22 @@ class StudentResource extends Resource
                                 ->preload(),
                         Forms\Components\Grid::make(2)
                             ->schema([
-                              Forms\Components\Select::make('school_class_id')
-                                    ->label('الصف')
-                                    ->options(function (callable $get) {
-                                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                                        if (!$schoolId) {
-                                            return [];
-                                        }
+                            Forms\Components\Select::make('academic_band_id')
+                                ->label('الفرقة')
+                                ->options(function (callable $get) {
+                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
 
-                                        return \App\Models\GradeClass::where('school_id', $schoolId)
-                                            ->pluck('name_ar', 'id');
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->reactive()
-                                    ->required()
-                                    ->afterStateUpdated(fn ($state, callable $set) => $set('section_id', null))
+                                    return \App\Models\AcademicBand::where('school_id', $schoolId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->reactive()
+                                ->required()
+                                ->afterStateUpdated(fn ($state, callable $set) => $set('section_id', null))
                             ]),
                         Forms\Components\Grid::make(2)
                             ->schema([
@@ -200,9 +200,9 @@ class StudentResource extends Resource
                 Tables\Columns\TextColumn::make('branch.name_ar')
                     ->label('الفرع')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('schoolClass.name_ar')
-                    ->label('الصف')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('academicBand.name_ar')
+            ->label('الفرقة')
+            ->sortable(),
                 Tables\Columns\TextColumn::make('gender')
                     ->label('الجنس')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
@@ -226,9 +226,9 @@ class StudentResource extends Resource
                 Tables\Filters\SelectFilter::make('branch')
                     ->label('الفرع')
                     ->relationship('branch', 'name_ar'),
-                Tables\Filters\SelectFilter::make('schoolClass')
-                    ->label('الصف')
-                    ->relationship('schoolClass', 'name_ar'),
+                Tables\Filters\SelectFilter::make('academicBand')
+                    ->label('الفرقة')
+                    ->relationship('academicBand', 'name_ar'),
                 Tables\Filters\SelectFilter::make('gender')
                     ->label('الجنس')
                     ->options([

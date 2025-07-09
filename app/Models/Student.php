@@ -67,7 +67,10 @@ class Student extends Model
             ->withTimestamps()
             ->withPivot('is_primary');
     }
-    
+    public function academicBand()
+    {
+        return $this->belongsTo(AcademicBand::class);
+    }
     public function primaryGuardian()
     {
         return $this->guardians()->wherePivot('is_primary', true)->first();

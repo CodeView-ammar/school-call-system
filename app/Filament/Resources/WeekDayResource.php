@@ -22,6 +22,16 @@ class WeekDayResource extends Resource
     protected static ?string $modelLabel = 'يوم أسبوع';
     protected static ?string $pluralModelLabel = 'أيام الأسبوع';
     protected static ?string $navigationGroup = 'إدارة التوقيت';
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
 
 public static function form(Form $form): Form
 {
@@ -119,11 +129,12 @@ public static function form(Form $form): Form
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('school.name_ar')
-                    ->label('المدرسة')
-                    ->searchable()
-                    ->sortable(),
-                    
+            Tables\Columns\TextColumn::make('school.name_ar')
+                ->label('المدرسة')
+                ->searchable()
+                ->sortable()
+                ->visible(fn () => auth()->user()?->school_id === null),
+
                 Tables\Columns\TextColumn::make('branch.name_ar')
                     ->label('الفرع')
                     ->searchable()
@@ -223,15 +234,5 @@ public static function form(Form $form): Form
         ];
     }
     
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        
-        // إذا كان المستخدم مدير مدرسة، اعرض البيانات الخاصة بمدرسته فقط
-        if (auth()->user()?->school_id) {
-            $query->where('school_id', auth()->user()->school_id);
-        }
-        
-        return $query;
-    }
+
 }

@@ -39,11 +39,14 @@ class AcademicBandResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('school_id')
+
+                 Forms\Components\Select::make('school_id')
                     ->label('المدرسة')
-                    ->relationship('school', 'name_ar')
+                    ->options(\App\Models\School::pluck('name_ar', 'id'))
+                    ->default(auth()->user()?->school_id)
+                    ->disabled(fn () => auth()->user()?->school_id !== null)
+                    ->hidden(fn () => auth()->user()?->school_id !== null)
                     ->required(),
-                
                 Forms\Components\Select::make('education_level_id')
                     ->label('المراحل التعليمية')
                     ->relationship('educationLevel', 'name_ar')
@@ -150,8 +153,8 @@ class AcademicBandResource extends Resource
     {
         return [
             'index' => Pages\ListAcademicBands::route('/'),
-            'create' => Pages\CreateAcademicBand::route('/create'),
-            'edit' => Pages\EditAcademicBand::route('/{record}/edit'),
+            // 'create' => Pages\CreateAcademicBand::route('/create'),
+            // 'edit' => Pages\EditAcademicBand::route('/{record}/edit'),
         ];
     }
 }
