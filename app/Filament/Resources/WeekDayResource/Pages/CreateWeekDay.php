@@ -26,7 +26,7 @@ class CreateWeekDay extends CreateRecord
                 'day'           => $day,
                 'time_from'     => $data['time_from'],
                 'time_to'       => $data['time_to'],
-                'day_inactive'  => $data['day_inactive'] ?? false,
+                'day_inactive'  => $data['day_inactive'] ,
                 'band_id'       => $data['band_id'] ?? 1,
                 'branch_code'   => $data['branch_code'] ?? '',
                 'customer_code' => $data['customer_code'] ?? '',

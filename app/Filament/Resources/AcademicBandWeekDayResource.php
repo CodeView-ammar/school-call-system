@@ -19,13 +19,13 @@ class AcademicBandWeekDayResource extends Resource
     protected static ?string $model = AcademicBandWeekDay::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
-    
+
     protected static ?string $navigationGroup = 'إدارة المدارس';
-    
+
     protected static ?string $modelLabel = 'جدولة الفرق الدراسية';
 
     protected static ?string $pluralModelLabel = 'جدولة الفرق الدراسية';
-    
+
     protected static ?int $navigationSort = 5;
 
     public static function getEloquentQuery(): Builder
@@ -54,7 +54,7 @@ public static function form(Form $form): Form
                 ->options(function (callable $get) {
                     $schoolId = $get('school_id') ?? auth()->user()?->school_id;
                     if (!$schoolId) return [];
-                    
+
                     return AcademicBand::where('school_id', $schoolId)
                         ->where('is_active', true)
                         ->pluck('name_ar', 'id');
@@ -67,7 +67,7 @@ public static function form(Form $form): Form
                 ->options(function (callable $get) {
                     $schoolId = $get('school_id') ?? auth()->user()?->school_id;
                     if (!$schoolId) return [];
-                    
+
                     return WeekDay::where('school_id', $schoolId)
                         ->where('day_inactive', '!=', 1)
                         ->pluck('day', 'day_id');
@@ -111,23 +111,26 @@ public static function form(Form $form): Form
 
                 Tables\Columns\TextColumn::make('academicBand.name_ar')
                     ->label('الفرقة الدراسية')
-                    ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('weekDay.day')
                     ->label('يوم الأسبوع')
-                    ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->color('primary'),
 
                 Tables\Columns\TextColumn::make('start_time')
                     ->label('وقت البداية')
                     ->time('H:i')
-                    ->sortable(),
+                    ->badge()
+                    ->color('success'),
 
                 Tables\Columns\TextColumn::make('end_time')
                     ->label('وقت النهاية')
                     ->time('H:i')
-                    ->sortable(),
+                    ->badge()
+                    ->color('warning'),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('الحالة')
@@ -136,6 +139,11 @@ public static function form(Form $form): Form
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
+
+                Tables\Columns\TextColumn::make('notes')
+                    ->label('ملاحظات')
+                    ->limit(30)
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -163,7 +171,7 @@ public static function form(Form $form): Form
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    
+
                     Tables\Actions\BulkAction::make('activate')
                         ->label('تفعيل المحدد')
                         ->icon('heroicon-o-check-circle')

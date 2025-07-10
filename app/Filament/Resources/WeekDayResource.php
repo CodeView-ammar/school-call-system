@@ -116,8 +116,8 @@ public static function form(Form $form): Form
                     Forms\Components\Grid::make(2)
                         ->schema([
                             Forms\Components\Toggle::make('day_inactive')
-                                ->label('غير نشط')
-                                ->default(true),
+                                ->label('نشط')
+                                ->default([true]),
                 ]),
 
                 ]),

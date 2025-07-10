@@ -30,8 +30,8 @@ class EditWeekDay extends EditRecord
             $data['school_id'] = auth()->user()->school_id;
         }
 
-        // تحويل day_inactive إلى قيمة صحيحة
-        $data['day_inactive'] = isset($data['day_inactive']) && $data['day_inactive'] ? 1 : 0;
+        // تحويل day_inactive إلى قيمة boolean
+        // $data['day_inactive'] = isset($data['day_inactive']) && $data['day_inactive'] ? false : true;
 
         return $data;
     }

@@ -40,152 +40,195 @@ class StudentResource extends Resource
 
         return $query;
     }
-
-    public static function form(Form $form): Form
-    {
-        return $form
+public static function form(Form $form): Form
+{
+    return $form->schema([
+        // بيانات المدرسة والفرع
+        Forms\Components\Section::make('معلومات المدرسة')
             ->schema([
-                Forms\Components\Section::make('معلومات الطالب الأساسية')
-                    ->schema([
-                      
-                        Forms\Components\Select::make('school_id')
-                            ->label('المدرسة')
-                            ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
-                            ->default(auth()->user()?->school_id)
-                            ->disabled(fn () => auth()->user()?->school_id !== null)
-                            ->required()
-                            ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null))
-                            ->reactive(),
-                            Forms\Components\Select::make('branch_id')
-                                ->label('الفرع')
-                                ->options(function (callable $get) {
-                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                                    if (!$schoolId) {
-                                        return [];
-                                    }
-                                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
-                                })
-                                ->required()
-                                ->searchable()
-                                ->preload(),
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                            Forms\Components\Select::make('academic_band_id')
-                                ->label('الفرقة')
-                                ->options(function (callable $get) {
-                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                                    if (!$schoolId) {
-                                        return [];
-                                    }
+                Forms\Components\Select::make('school_id')
+                    ->label('المدرسة')
+                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                    ->default(auth()->user()?->school_id)
+                    ->disabled(fn () => auth()->user()?->school_id !== null)
+                    ->required()
+                    ->reactive()
+                    ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)),
 
-                                    return \App\Models\AcademicBand::where('school_id', $schoolId)
-                                        ->pluck('name_ar', 'id');
-                                })
-                                ->searchable()
-                                ->preload()
-                                ->reactive()
-                                ->required()
-                                ->afterStateUpdated(fn ($state, callable $set) => $set('section_id', null))
-                            ]),
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('name_ar')
-                                    ->label('اسم الطالب (عربي)')
-                                    ->required()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('name_en')
-                                    ->label('Student Name (English)')
-                                    ->maxLength(255),
-                            ]),
-                        Forms\Components\Grid::make(3)
-                            ->schema([
-                                Forms\Components\TextInput::make('student_number')
-                                    ->label('رقم الطالب')
-                                    ->required()
-                                    ->unique(ignoreRecord: true)
-                                    ->maxLength(20),
-                                Forms\Components\TextInput::make('national_id')
-                                    ->label('رقم الهوية/الإقامة')
-                                    ->maxLength(20),
-                                Forms\Components\Select::make('gender')
-                                    ->label('الجنس')
-                                    ->options([
-                                        'male' => 'ذكر',
-                                        'female' => 'أنثى',
-                                    ])
-                                    ->required(),
-                            ]),
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\DatePicker::make('birth_date')
-                                    ->label('تاريخ الميلاد')
-                                    ->maxDate(now()),
-                                Forms\Components\FileUpload::make('photo')
-                                    ->label('صورة الطالب')
-                                    ->image()
-                                    ->directory('student-photos')
-                                    ->imageResizeMode('cover')
-                                    ->imageCropAspectRatio('1:1')
-                                    ->imageResizeTargetWidth('300')
-                                    ->imageResizeTargetHeight('300'),
-                            ]),
-                    ]),
-                    
-                Forms\Components\Section::make('معلومات السكن والطوارئ')
-                    ->schema([
-                        Forms\Components\Grid::make(1)
-                            ->schema([
-                                Forms\Components\Textarea::make('address_ar')
-                                    ->label('العنوان (عربي)')
-                                    ->rows(2),
-                                Forms\Components\Textarea::make('address_en')
-                                    ->label('Address (English)')
-                                    ->rows(2),
-                            ]),
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('emergency_contact')
-                                    ->label('هاتف الطوارئ')
-                                    ->tel(),
-                                Forms\Components\Textarea::make('medical_notes')
-                                    ->label('ملاحظات طبية')
-                                    ->rows(2),
-                            ]),
-                    ]),
-                    
-                Forms\Components\Section::make('معلومات النقل')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\Select::make('bus_id')
-                                    ->label('الحافلة')
-                                    ->relationship('bus', 'number')
-                                    ->searchable(),
-                                Forms\Components\TextInput::make('pickup_location')
-                                    ->label('نقطة الاستلام')
-                                    ->maxLength(255),
-                            ]),
-                    ]),
-                    
-                Forms\Components\Toggle::make('is_active')
-                    ->label('نشط')
-                    ->default(true),
-                Forms\Components\View::make('student-map-picker')
-                    ->view('filament.forms.components.student-map-picker')
+                Forms\Components\Select::make('branch_id')
+                    ->label('الفرع')
+                    ->options(function (callable $get) {
+                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                        if (!$schoolId) return [];
+                        return \App\Models\Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->columns(2),
+
+        // بيانات الطالب الشخصية
+        Forms\Components\Section::make('معلومات الطالب')
+            ->schema([
+                Forms\Components\Grid::make(3)->schema([
+                    Forms\Components\TextInput::make('name_ar')
+                        ->label('اسم الطالب (عربي)')
+                        ->required()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('name_en')
+                        ->label('اسم الطالب (إنجليزي)')
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('student_number')
+                        ->label('رقم الطالب')
+                        ->unique(ignoreRecord: true)
+                        ->required()
+                        ->maxLength(20),
+                ]),
+                Forms\Components\Grid::make(3)->schema([
+                    Forms\Components\TextInput::make('national_id')
+                        ->label('رقم الهوية / الإقامة')
+                        ->maxLength(20),
+                    Forms\Components\Select::make('gender')
+                        ->label('الجنس')
+                        ->options(['male' => 'ذكر', 'female' => 'أنثى'])
+                        ->required(),
+                    Forms\Components\DatePicker::make('birth_date')
+                        ->label('تاريخ الميلاد')
+                        ->maxDate(now()),
+                ]),
+            Forms\Components\FileUpload::make('photo')
+                ->label('صورة الطالب')
+                ->image()
+                ->directory('student-photos')
+                ->imageResizeMode('cover')
+                ->imageCropAspectRatio('1:1')
+                ->imageResizeTargetWidth(300)
+                ->imageResizeTargetHeight(300)
+                ->maxSize(2048) // بالحجم بالكيلوبايت (2MB)
+                ->rules(['image', 'mimes:jpeg,jpg,png,webp'])
+            ]),
+
+        // بيانات الصف والفرقة
+        Forms\Components\Section::make('المستوى الدراسي')
+            ->schema([
+                Forms\Components\Grid::make(2)->schema([
+                    // Forms\Components\Select::make('grade_id')
+                    //     ->label('الصف الدراسي')
+                    //     ->options(function (callable $get) {
+                    //         $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                    //         if (!$schoolId) return [];
+                    //         return \App\Models\Grade::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                    //     })
+                    //     ->searchable()
+                    //     ->required()
+                    //     ->reactive()
+                    //     ->afterStateUpdated(fn ($state, callable $set) => $set('class_id', null)),
+
+                    // Forms\Components\Select::make('class_id')
+                    //     ->label('الفصل')
+                    //     ->options(function (callable $get) {
+                    //         $gradeId = $get('grade_id');
+                    //         if (!$gradeId) return [];
+                    //         return \App\Models\SchoolClass::where('grade_id', $gradeId)->pluck('name_ar', 'id');
+                    //     })
+                    //     ->searchable()
+                    //     ->required(),
+                ]),
+                Forms\Components\Select::make('academic_band_id')
+                    ->label('الفرقة')
+                    ->options(function (callable $get) {
+                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                        if (!$schoolId) return [];
+                        return \App\Models\AcademicBand::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->required(),
+                Forms\Components\DatePicker::make('enrollment_date')
+                    ->label('تاريخ التسجيل')
+                    ->default(now())
+                    ->required(),
+            ]),
+
+        // العنوان وموقع الخريطة
+        Forms\Components\Section::make('معلومات السكن والطوارئ')
+            ->schema([
+                Forms\Components\Grid::make(2)->schema([
+                    Forms\Components\TextInput::make('phone')
+                        ->label('رقم الهاتف')
+                        ->tel()
+                        ->maxLength(20),
+                    Forms\Components\TextInput::make('emergency_contact')
+                        ->label('هاتف الطوارئ')
+                        ->tel()
+                        ->maxLength(20),
+                ]),
+                Forms\Components\Textarea::make('address_ar')
+                    ->label('العنوان (عربي)')
+                    ->rows(2),
+                Forms\Components\Textarea::make('address_en')
+                    ->label('Address (English)')
+                    ->rows(2),
+                Forms\Components\Textarea::make('medical_notes')
+                    ->label('ملاحظات طبية')
+                    ->rows(2),
+                Forms\Components\View::make('filament.forms.components.student-map-picker')
+                    ->label('الموقع الجغرافي')
                     ->afterStateUpdated(function ($state, callable $set) {
-                    if (isset($state['lat']) && isset($state['lng'])) {
-                    $set('latitude', $state['lat']);
-                    $set('longitude', $state['lng']);
-                }
-                }),
+                        dd("aa");
+                        if (isset($state['latitude']) && isset($state['longitude'])) {
+                            $set('latitude', $state['lat']);
+                            $set('longitude', $state['longitude']);
+                        }
+                    }),
+                     Forms\Components\TextInput::make('latitude')
+                ->label('خط العرض')
+                ->required()
+                ->disabled(), // أو لا حسب حاجتك
+            
+            Forms\Components\TextInput::make('longitude')
+                ->label('خط الطول')
+                ->required()
+                ->disabled(), 
+                // Forms\Components\TextInput::make('latitude')
+                //     ->hidden()
+                //     ->dehydrated(),
+                // Forms\Components\TextInput::make('longitude')
+                //     ->hidden()
+                //     ->dehydrated(),
+            ]),
 
-            ]);
-    }
+        // بيانات النقل وتفعيل الحساب
+        Forms\Components\Section::make('معلومات النقل')
+            ->schema([
+                Forms\Components\Grid::make(2)->schema([
+                    Forms\Components\Select::make('bus_id')
+                        ->label('الحافلة')
+                        ->relationship('bus', 'number')
+                        ->searchable(),
+                    Forms\Components\TextInput::make('pickup_location')
+                        ->label('نقطة الاستلام')
+                        ->maxLength(255),
+                ]),
+            ]),
+
+        Forms\Components\Toggle::make('is_active')
+            ->label('نشط')
+            ->default(true),
+    ])->columns(2);
+}
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
+            Tables\Columns\TextColumn::make('school.name_ar')
+                ->label('المدرسة')
+                ->searchable()
+                ->sortable()
+                ->visible(fn () => auth()->user()?->school_id === null),
+
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('الصورة')
                     ->circular(),

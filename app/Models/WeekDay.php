@@ -27,6 +27,7 @@ class WeekDay extends Model
     protected $casts = [
         'time_to' => 'datetime:H:i:s',
         'time_from' => 'datetime:H:i:s',
+        'day_inactive' => 'boolean',
     ];
 
     // العلاقات
@@ -57,15 +58,15 @@ class WeekDay extends Model
         return $query->where('branch_id', $branchId);
     }
 
-    public function scopeActive($query)
-    {
-        return $query->where('day_inactive', '!=', 1);
-    }
+    // public function scopeActive($query)
+    // {
+    //     return $query->where('day_inactive', true);
+    // }
 
-    public function scopeInactive($query)
-    {
-        return $query->where('day_inactive', 1);
-    }
+    // public function scopeInactive($query)
+    // {
+    //     return $query->where('day_inactive', false);
+    // }
 
     // دالة للتحقق من تداخل الأوقات
     public function hasTimeConflict($day, $timeFrom, $timeTo, $excludeId = null)
@@ -92,7 +93,7 @@ class WeekDay extends Model
     // دالة للحصول على أيام العمل
     public function scopeWorkingDays($query)
     {
-        return $query->where('day_inactive', '!=', 1);
+        return $query->where('day_inactive', true);
     }
 
     // دالة للحصول على الأيام حسب الفرقة
