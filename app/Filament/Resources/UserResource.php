@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
+use Filament\Forms\Components\Select;
+use Illuminate\Validation\Rule;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -85,6 +87,17 @@ class UserResource extends Resource
                             ->label('رقم الهاتف')
                             ->tel()
                             ->maxLength(255),
+                       Select::make('user_type')
+                            ->label('نوع المستخدم')
+                            ->required()
+                            ->options([
+                                'school_admin'  => 'مدير المدرسة',
+                                'teacher'       => 'معلم',
+                                'guardian'         => 'ولي امر',
+                                'driver'        => 'سائق',
+                                'supervisor'    => 'مشرف',
+                            ])
+                            ->native(false), 
                         Forms\Components\TextInput::make('password')
                             ->label('كلمة المرور')
                             ->password()

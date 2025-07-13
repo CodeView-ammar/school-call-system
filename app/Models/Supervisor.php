@@ -19,28 +19,31 @@ class Supervisor extends Model
         'user_id',
         'employee_id',
         'name',
-        'name_ar',
         'phone',
         'email',
-        'hire_date',
-        'department',
+        'created_at',
+        "guardians",
         'position',
         'salary',
         'is_active'
     ];
 
     protected $casts = [
-        'hire_date' => 'date',
+        'created_at' => 'date',
         'salary' => 'decimal:2',
         'is_active' => 'boolean'
     ];
 
+    
     // العلاقات
     public function school(): BelongsTo
     {
         return $this->belongsTo(School::class);
     }
-
+    public function guardians()
+    {
+        return $this->belongsToMany(Guardian::class, 'guardian_supervisor');
+    }
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -63,14 +66,11 @@ class Supervisor extends Model
         return $this->hasMany(CallSession::class);
     }
 
-    public function supervisorShifts(): HasMany
-    {
-        return $this->hasMany(SupervisorShift::class);
-    }
 
-    public function students(): HasMany
+
+    public function students()
     {
-        return $this->hasMany(Student::class);
+        return $this->belongsToMany(Student::class, 'student_supervisor');
     }
 
     // Accessors
@@ -81,12 +81,17 @@ class Supervisor extends Model
 
     public function getServiceYearsAttribute(): int
     {
-        if ($this->hire_date) {
-            return $this->hire_date->diffInYears(now());
+        if ($this->created_at) {
+            return $this->created_at->diffInYears(now());
         }
         return 0;
     }
-
+    public function toggleStatus(): void
+    {
+        $this->update([
+            'is_active' => !$this->is_active,
+        ]);
+    }
     public function getAssignedBusesCountAttribute(): int
     {
         return $this->buses()->count();
@@ -121,10 +126,6 @@ class Supervisor extends Model
         return $query->where('branch_id', $branchId);
     }
 
-    public function scopeByDepartment(Builder $query, string $department): Builder
-    {
-        return $query->where('department', $department);
-    }
 
     public function scopeByPosition(Builder $query, string $position): Builder
     {

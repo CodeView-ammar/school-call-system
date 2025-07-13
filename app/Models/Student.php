@@ -72,7 +72,10 @@ class Student extends Model
     {
         return $this->guardians()->wherePivot('is_primary', true)->first();
     }
-    
+    public function supervisors()
+{
+    return $this->belongsToMany(Supervisor::class, 'student_supervisor');
+}
     public function attendances()
     {
         return $this->hasMany(Attendance::class);
