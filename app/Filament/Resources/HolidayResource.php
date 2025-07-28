@@ -18,7 +18,7 @@ class HolidayResource extends Resource
     protected static ?string $navigationLabel = 'العطل';
     protected static ?string $modelLabel = 'عطلة';
     protected static ?string $pluralModelLabel = 'العطل';
-    protected static ?string $navigationGroup = 'إدارة التوقيت';
+    protected static ?string $navigationGroup = 'الاستعداد والانصراف';
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
         {
             $query = parent::getEloquentQuery();

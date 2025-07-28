@@ -110,7 +110,6 @@ class QuickSetupSeeder extends Seeder
                     [
                         'school_id' => $school->id,
                         'branch_id' => $branch->id,
-                        'school_class_id' => $class->id,
                         'code' => 'STD-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
                         'student_number' => $index + 1,
                         'name_ar' => $nameData[0],

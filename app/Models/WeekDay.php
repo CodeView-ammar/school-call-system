@@ -93,7 +93,7 @@ class WeekDay extends Model
     // دالة للحصول على أيام العمل
     public function scopeWorkingDays($query)
     {
-        return $query->where('day_inactive', true);
+        return $query->where('day_inactive', false);
     }
 
     // دالة للحصول على الأيام حسب الفرقة

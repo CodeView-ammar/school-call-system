@@ -6,7 +6,8 @@ use App\Filament\Resources\SupervisorResource\Pages;
 use App\Filament\Resources\SupervisorResource\RelationManagers;
 use App\Models\Supervisor;
 use App\Models\School;
-use App\Models\Branch;
+use App\Models\User;
+
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -65,21 +66,7 @@ class SupervisorResource extends Resource
                                     ->default(auth()->user()?->school_id)
                                     ->disabled(fn () => auth()->user()?->school_id !== null)
                                     ->preload()
-                                    ->live()
-                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('branch_id', null)),
-
-                                Forms\Components\Select::make('branch_id')
-                                    ->label('الفرع')
-                                    ->options(function (Forms\Get $get) {
-                                        $schoolId = $get('school_id');
-                                        if (!$schoolId) {
-                                            return [];
-                                        }
-                                        return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
-                                    })
-                                    ->searchable()
-                                    ->required()
-                                    ->preload(),
+                                    ->live(),
 
 
                                 Forms\Components\TextInput::make('name')
@@ -177,11 +164,6 @@ class SupervisorResource extends Resource
                     ->visible(fn () => auth()->user()?->school_id === null),
 
 
-                Tables\Columns\TextColumn::make('branch.name_ar')
-                    ->label('الفرع')
-                    ->sortable()
-                    ->toggleable()
-                    ->placeholder('غير محدد'),
 
                 Tables\Columns\TextColumn::make('phone')
                     ->label('الهاتف')
@@ -237,11 +219,7 @@ class SupervisorResource extends Resource
                     ->searchable()
                     ->preload(),
 
-                SelectFilter::make('branch_id')
-                    ->label('الفرع')
-                    ->options(Branch::pluck('name_ar', 'id'))
-                    ->searchable()
-                    ->preload(),
+              
 
                 SelectFilter::make('gender')
                     ->label('الجنس')
@@ -286,7 +264,7 @@ class SupervisorResource extends Resource
                         // فصل جميع العلاقات قبل الحذف
                         $record->students()->detach();
                         $record->guardians()->detach();
-                        $record->buses()->detach();
+                        // $record->buses()->detach();
                     }),
             ])
             ->bulkActions([
@@ -297,7 +275,7 @@ class SupervisorResource extends Resource
                             foreach ($records as $record) {
                                 $record->students()->detach();
                                 $record->guardians()->detach();
-                                $record->buses()->detach();
+                                // $record->buses()->detach();
                             }
                         }),
 
@@ -366,9 +344,6 @@ class SupervisorResource extends Resource
                     ->schema([
                         TextEntry::make('school.name_ar')
                             ->label('المدرسة'),
-                        TextEntry::make('branch.name_ar')
-                            ->label('الفرع')
-                            ->placeholder('غير محدد'),
                         TextEntry::make('position')
                             ->label('المنصب')
                             ->placeholder('غير محدد'),
@@ -424,6 +399,30 @@ class SupervisorResource extends Resource
                     ->columns(2),
             ]);
     }
+    public static function handleRecordCreation(array $data): Model
+    {
+        // إنشاء Guardian بدون user_id
+        $supervisor = Supervisor::create(collect($data)->except(['student_ids'])->toArray());
+        // إنشاء المستخدم
+        $user = User::create([
+            'name'      => $supervisor->name_ar,
+            'email'     => $supervisor->email ?? 'supervisor' . $supervisor->id . '@example.com',
+            'phone'     => $supervisor->phone,
+            'user_type' => 'supervisor',
+            'password'  => bcrypt('admin123'),
+            'is_active' => true,
+            'school_id' => $supervisor->school_id,
+        ]);
+
+        // ربط Guardian بالمستخدم
+        $supervisor->user_id = $user->id;
+        $supervisor->save();
+
+
+        return $supervisor;
+    }
+
+
 
     public static function getRelations(): array
     {
@@ -448,10 +447,6 @@ class SupervisorResource extends Resource
         return static::getModel()::where('is_active', true)->count();
     }
 
-    public static function getGlobalSearchEloquentQuery(): Builder
-    {
-        return parent::getGlobalSearchEloquentQuery()->with(['school', 'branch']);
-    }
 
     public static function getGloballySearchableAttributes(): array
     {

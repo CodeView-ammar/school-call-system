@@ -23,7 +23,16 @@ class SystemSettingResource extends Resource
     protected static ?string $pluralModelLabel = 'إعدادات النظام';
     protected static ?string $navigationGroup = 'إدارة النظام';
     protected static bool $shouldRegisterNavigation = true;
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
 
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
     public static function form(Form $form): Form
     {
         return $form

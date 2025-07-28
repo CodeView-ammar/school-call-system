@@ -22,10 +22,10 @@ class CreateStudent extends CreateRecord
         if (!isset($data['student_number']) || empty($data['student_number'])) {
             $data['student_number'] = $this->generateStudentNumber();
         }
-
+        
         // إنشاء كود الطالب
         if (!isset($data['code']) || empty($data['code'])) {
-            $data['code'] = $this->generateStudentCode();
+            $data['code'] = $this->generateStudentCode($data['school_id']);
         }
 
         // التأكد من تحويل البيانات الجغرافية
@@ -70,24 +70,20 @@ class CreateStudent extends CreateRecord
         return $year . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
-    private function generateStudentCode(): string
+    private function generateStudentCode( $school_id): string
     {
-        $schoolId = auth()->user()->school_id;
+        $schoolId = $school_id;
         $prefix = 'STU';
-        
-        // البحث عن آخر كود طالب في المدرسة
-        $lastStudent = \App\Models\Student::where('school_id', $schoolId)
+
+        // البحث عن أكبر رقم حاليًا بدون استخدام while
+        $lastNumber = \App\Models\Student::where('school_id', $schoolId)
             ->where('code', 'like', $prefix . '%')
-            ->orderBy('code', 'desc')
-            ->first();
+            ->selectRaw("MAX(CAST(SUBSTR(code, LENGTH('$prefix') + 1) AS INTEGER)) as max_code")
+            ->value('max_code');
 
-        if ($lastStudent && $lastStudent->code) {
-            $lastNumber = (int) substr($lastStudent->code, strlen($prefix));
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
+            $newNumber = (int) $lastNumber + 1;
+            // dd($prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT));
         return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
     }
+
 }

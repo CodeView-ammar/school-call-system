@@ -29,34 +29,34 @@ class SchoolResource extends Resource
     
     protected static ?string $pluralModelLabel = 'المدارس';
     
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 0;
     
     protected static ?string $navigationGroup = 'إدارة المدارس';
     
     // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canEdit($record): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canDeleteAny(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
 
     public static function form(Form $form): Form

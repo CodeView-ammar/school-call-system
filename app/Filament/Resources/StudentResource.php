@@ -65,7 +65,21 @@ public static function form(Form $form): Form
                     ->required()
                     ->searchable()
                     ->preload(),
-            ])
+                Forms\Components\Select::make('grade_class_id')
+                    ->label('الفصل الدراسي')
+                    ->options(function (callable $get) {
+                        $branchId = $get('branch_id');
+                        if (!$branchId) {
+                            return [];
+                        }
+                        return \App\Models\GradeClass::where('branch_id', $branchId)
+                            ->where('is_active', true)
+                            ->pluck('name_ar', 'id');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->reactive(),
+                    ])
             ->columns(2),
 
         // بيانات الطالب الشخصية
@@ -173,24 +187,22 @@ public static function form(Form $form): Form
                 Forms\Components\Textarea::make('medical_notes')
                     ->label('ملاحظات طبية')
                     ->rows(2),
-                Forms\Components\View::make('filament.forms.components.student-map-picker')
+              Forms\Components\View::make('filament.forms.components.student-map-picker')
                     ->label('الموقع الجغرافي')
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        dd("aa");
+                    ->beforeStateDehydrated(function ($state, callable $set) {
                         if (isset($state['latitude']) && isset($state['longitude'])) {
-                            $set('latitude', $state['lat']);
+                            $set('latitude', $state['latitude']);
                             $set('longitude', $state['longitude']);
                         }
                     }),
-                     Forms\Components\TextInput::make('latitude')
-                ->label('خط العرض')
-                ->required()
-                ->disabled(), // أو لا حسب حاجتك
-            
-            Forms\Components\TextInput::make('longitude')
-                ->label('خط الطول')
-                ->required()
-                ->disabled(), 
+
+                Forms\Components\TextInput::make('latitude')
+                    ->label('خط العرض')
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('longitude')
+                    ->label('خط الطول')
+                    ->disabled(),
                 // Forms\Components\TextInput::make('latitude')
                 //     ->hidden()
                 //     ->dehydrated(),
@@ -204,9 +216,21 @@ public static function form(Form $form): Form
             ->schema([
                 Forms\Components\Grid::make(2)->schema([
                     Forms\Components\Select::make('bus_id')
-                        ->label('الحافلة')
-                        ->relationship('bus', 'number')
-                        ->searchable(),
+                    ->label('الحافلة')
+                    ->relationship('bus', 'number')
+                    ->searchable()
+                    ->reactive() // اجعل الحقل تفاعليًا
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        // إعادة تعيين bus_id عند تغيير الفرع
+                        $set('bus_id', null);
+                    })
+                    ->options(function (callable $get) {
+                        $branchId = $get('branch_id'); // الحصول على معرف الفرع
+                        if (!$branchId) return [];
+
+                        // جلب الحافلات المرتبطة بالفرع
+                        return \App\Models\Bus::where('branch_id', $branchId)->pluck('number', 'id');
+                    }),
                     Forms\Components\TextInput::make('pickup_location')
                         ->label('نقطة الاستلام')
                         ->maxLength(255),
@@ -229,6 +253,14 @@ public static function form(Form $form): Form
                 ->sortable()
                 ->visible(fn () => auth()->user()?->school_id === null),
 
+            Tables\Columns\TextColumn::make('branch.name_ar')
+                ->label('الفرع')
+                ->searchable()
+                ->sortable(),
+                Tables\Columns\TextColumn::make('gradeClass.name_ar')
+                    ->label('الفصل الدراسي')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('الصورة')
                     ->circular(),
@@ -310,6 +342,7 @@ public static function form(Form $form): Form
             'index' => Pages\ListStudents::route('/'),
             'create' => Pages\CreateStudent::route('/create'),
             'edit' => Pages\EditStudent::route('/{record}/edit'),
+            'view' => Pages\ViewStudent::route('/{record}'),
         ];
     }
 }

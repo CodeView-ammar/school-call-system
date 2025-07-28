@@ -36,10 +36,6 @@ class Grade extends Model
         return $this->belongsTo(EducationLevel::class);
     }
 
-    public function schoolClasses(): HasMany
-    {
-        return $this->hasMany(SchoolClass::class);
-    }
 
     public function students(): HasMany
     {
@@ -67,7 +63,7 @@ class Grade extends Model
 
     public function getClassesCountAttribute(): int
     {
-        return $this->schoolClasses()->count();
+        return $this->gradeClass()->count();
     }
 
     // Scopes

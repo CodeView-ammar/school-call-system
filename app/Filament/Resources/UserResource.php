@@ -32,30 +32,30 @@ class UserResource extends Resource
     protected static ?string $navigationGroup = 'إدارة النظام';
     
     // إظهار الصفحة للمدير الأساسي فقط
-    // public static function canViewAny(): bool
-    // {
-    //     return auth()->user()?->hasRole('super_admin') ?? false;
-    // }
+//     public static function canViewAny(): bool
+// {
+
+//     return auth()->check() && auth()->user()->user_type === 'super_admin';
+// }
+//     public static function canCreate(): bool
+//     {
+//         return auth()->user()?->hasRole('super_admin') ?? false;
+//     }
     
-    // public static function canCreate(): bool
-    // {
-    //     return auth()->user()?->hasRole('super_admin') ?? false;
-    // }
+//     public static function canEdit($record): bool
+//     {
+//         return auth()->user()?->hasRole('super_admin') ?? false;
+//     }
     
-    // public static function canEdit($record): bool
-    // {
-    //     return auth()->user()?->hasRole('super_admin') ?? false;
-    // }
+//     public static function canDelete($record): bool
+//     {
+//         return auth()->user()?->hasRole('super_admin') ?? false;
+//     }
     
-    // public static function canDelete($record): bool
-    // {
-    //     return auth()->user()?->hasRole('super_admin') ?? false;
-    // }
-    
-    // public static function canDeleteAny(): bool
-    // {
-    //     return auth()->user()?->hasRole('super_admin') ?? false;
-    // }
+//     public static function canDeleteAny(): bool
+//     {
+//         return auth()->user()?->hasRole('super_admin') ?? false;
+//     }
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
@@ -92,10 +92,11 @@ class UserResource extends Resource
                             ->required()
                             ->options([
                                 'school_admin'  => 'مدير المدرسة',
-                                'teacher'       => 'معلم',
+                                'school_supervisor'    => 'مشرف مدرسة',
                                 'guardian'         => 'ولي امر',
+                                'assistant'       => 'مساعد',
                                 'driver'        => 'سائق',
-                                'supervisor'    => 'مشرف',
+                                'bussupervisor'    => 'مشرف باص',
                             ])
                             ->native(false), 
                         Forms\Components\TextInput::make('password')
@@ -151,16 +152,21 @@ class UserResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->visible(fn () => auth()->user()?->school_id === null),
-                Tables\Columns\TextColumn::make('roles.name')
-                    ->label('الأدوار')
-                    ->badge()
-                    ->separator(',')
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'super_admin' => 'مدير أساسي',
-                        'school_admin' => 'مدير مدرسة',
-                        'teacher' => 'معلم',
-                        'supervisor' => 'مشرف',
-                        default => $state,
+                
+                Tables\Columns\TextColumn::make('user_type')
+                    ->label('نوع المستخدم')
+                    ->searchable()
+                    ->sortable()
+                    ->formatStateUsing(function ($state) {
+                        return match ($state) {
+                            'school_admin' => 'مدير المدرسة',
+                            'school_supervisor' => 'مشرف مدرسة',
+                            'guardian' => 'ولي أمر',
+                            'assistant' => 'مساعد',
+                            'driver' => 'سائق',
+                            'bussupervisor' => 'مشرف باص',
+                            default => 'غير معروف',
+                        };
                     }),
                 Tables\Columns\TextColumn::make('phone')
                     ->label('الهاتف')

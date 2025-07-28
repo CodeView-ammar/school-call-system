@@ -6,7 +6,15 @@ use App\Http\Controllers\Api\SupervisorController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\GuardianController;
 use App\Http\Controllers\Api\SchoolController;
+use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BusController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\StudentCallLogController;
+use App\Http\Controllers\Api\WeekDayController;
+use App\Http\Controllers\Api\UserController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -23,66 +31,98 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Auth user routes
     Route::get('auth/user', [AuthController::class, 'user']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
-    
-    // Demo route for testing without authentication
-    Route::get('demo/login', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تسجيل الدخول بنجاح',
-            'data' => [
-                'token' => 'demo-token-' . time(),
-                'token_type' => 'Bearer',
-                'user' => [
-                    'id' => 1,
-                    'name' => 'مدير النظام',
-                    'email' => 'admin@school.sa',
-                    'role' => 'admin',
-                    'created_at' => now()->toISOString(),
-                    'updated_at' => now()->toISOString(),
-                ],
-            ],
-        ]);
-    });
+    Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
+
 });
-    
+
     // Schools routes
     Route::apiResource('schools', SchoolController::class);
     Route::get('schools/{school}/statistics', [SchoolController::class, 'statistics']);
+    Route::get('schools/{school}/classes', [SchoolController::class, 'classes']);
+    Route::get('branches/{branch}/students', [SchoolController::class, 'studentsByBranch']);
+    Route::get('students/filter', [StudentController::class, 'studentsByBranchClassSchool']);
+
+    // Branches routes
+    Route::apiResource('branches', BranchController::class);
+    Route::get('branches/{branch}/statistics', [BranchController::class, 'statistics']);
+    Route::get('schools/{school_id}/branches', [BranchController::class, 'getBySchool']);
+    Route::get('schools/{school_id}/branches/names', [BranchController::class, 'getBranchNames']);
 
     // Supervisors routes
     Route::apiResource('supervisors', SupervisorController::class);
-    Route::put('supervisors/{supervisor}/toggle-status', [SupervisorController::class, 'toggleStatus']);
+    Route::get('supervisors/{id}/toggle-status', [SupervisorController::class, 'toggleStatus']);
     Route::get('supervisors/{supervisor}/statistics', [SupervisorController::class, 'statistics']);
     Route::get('supervisors/search', [SupervisorController::class, 'search']);
+    Route::get('supervisors-with-students', [SupervisorController::class, 'getSupervisorsWithGuardiansAndStudents']);
+
+    //bus
+    Route::get('/guardian/buses', [BusController::class, 'getBusesByGuardianAndSchool']);
+    Route::get('/guardian/students-with-buses', [BusController::class, 'getStudentsWithBusesByGuardianAndSchool']);
+    Route::get('/buses/driver-branches', [BusController::class, 'getDriverBranches']);
+    Route::get('/students/by-driver-branch', [BusController::class, 'getStudentsByDriverAndBranch']);
+
+    Route::post('/attendance', [AttendanceController::class, 'store']);
+    Route::get('/attendance/{studentId}', [AttendanceController::class, 'show']);
+    Route::put('/attendance/{id}', [AttendanceController::class, 'update']);
+    
     
     // Supervisor-Student relationship routes
     Route::post('supervisors/{supervisor}/students', [SupervisorController::class, 'attachStudent']);
     Route::delete('supervisors/{supervisor}/students/{student}', [SupervisorController::class, 'detachStudent']);
-    
+
     // Supervisor-Guardian relationship routes
     Route::post('supervisors/{supervisor}/guardians', [SupervisorController::class, 'attachGuardian']);
     Route::delete('supervisors/{supervisor}/guardians/{guardian}', [SupervisorController::class, 'detachGuardian']);
-
     // Students routes
+    Route::get('students/by-school', [StudentController::class, 'getStudentsByUserAndSchool']);
+
     Route::apiResource('students', StudentController::class);
+    Route::get('/students/by-user-and-school', [StudentController::class, 'getStudentsByUserAndSchoolnotbranch']);
     Route::post('students/{student}/upload-photo', [StudentController::class, 'uploadPhoto']);
     Route::get('students/search', [StudentController::class, 'search']);
-    
+
     // Student Export routes
     Route::get('students/export', [\App\Http\Controllers\Api\StudentExportController::class, 'exportToExcel']);
     Route::get('students/export/statistics', [\App\Http\Controllers\Api\StudentExportController::class, 'getExportStatistics']);
+
+   
+        
+    // Student calls routes
+
+    Route::put('student-calls/{id}/status', [App\Http\Controllers\Api\StudentCallController::class, 'updateStatus']);
+    Route::get('student-calls/{student_id}/today-latest',[App\Http\Controllers\Api\StudentCallController::class, 'todayLatestByStudent']);
     
-    // Student Restore routes
-    Route::prefix('students/restore')->group(function () {
-        Route::get('options', [\App\Http\Controllers\Api\StudentRestoreController::class, 'getRestoreOptions']);
-        Route::post('backup', [\App\Http\Controllers\Api\StudentRestoreController::class, 'createBackup']);
-        Route::get('backups', [\App\Http\Controllers\Api\StudentRestoreController::class, 'getBackups']);
-        Route::post('from-backup', [\App\Http\Controllers\Api\StudentRestoreController::class, 'restoreFromBackup']);
-        Route::post('reset-attendance', [\App\Http\Controllers\Api\StudentRestoreController::class, 'resetAttendance']);
-        Route::post('refresh-from-server', [\App\Http\Controllers\Api\StudentRestoreController::class, 'refreshFromServer']);
-        Route::delete('backup/{backup_id}', [\App\Http\Controllers\Api\StudentRestoreController::class, 'deleteBackup']);
-    });
+
+    // Student calls log routes
+    Route::get('student-calls-logs/', [StudentCallLogController::class, 'getTodayCallLog']);
+
+    // جلب جميع الندائات مع إمكانية التصفية
+    Route::get('/student-calls', [App\Http\Controllers\Api\StudentCallController::class, 'index']);
     
+    // إنشاء نداء جديد
+    Route::post('/student-calls', [App\Http\Controllers\Api\StudentCallController::class, 'store']);
+    
+    // جلب نداء محدد
+    Route::get('/student-calls/{studentCall}', [App\Http\Controllers\Api\StudentCallController::class, 'show']);
+    
+    // تحديث نداء محدد
+    Route::put('/student-calls/{studentCall}', [App\Http\Controllers\Api\StudentCallController::class, 'update']);
+    
+    // حذف نداء محدد
+    Route::delete('/student-calls/{studentCall}', [App\Http\Controllers\Api\StudentCallController::class, 'destroy']);
+    
+    // تحديث حالة النداء فقط
+    Route::put('/student-calls/{id}/status', [App\Http\Controllers\Api\StudentCallController::class, 'updateStatus']);
+    
+    // جلب آخر نداء لطالب معين في اليوم الحالي
+    Route::get('/student-calls/{studentId}/today-latest', [App\Http\Controllers\Api\StudentCallController::class, 'todayLatestByStudent']);
+    
+    // فحص وجود نداء لطالب في تاريخ معين
+    Route::post('/student-calls/check', [App\Http\Controllers\Api\StudentCallController::class, 'checkStudentCall']);
+    
+    // إحصائيات الندائات
+    Route::get('/student-calls/statistics', [App\Http\Controllers\Api\StudentCallController::class, 'statistics']);
+
     // Student-Guardian relationship routes
     Route::post('students/{student}/guardians', [StudentController::class, 'attachGuardian']);
     Route::delete('students/{student}/guardians/{guardian}', [StudentController::class, 'detachGuardian']);
@@ -90,10 +130,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Guardians routes
     Route::apiResource('guardians', GuardianController::class);
     Route::get('guardians/search', [GuardianController::class, 'search']);
-    
+
     // Guardian-Supervisor relationship routes
     Route::post('guardians/{guardian}/supervisors', [GuardianController::class, 'attachSupervisor']);
     Route::delete('guardians/{guardian}/supervisors/{supervisor}', [GuardianController::class, 'detachSupervisor']);
+
+
+    Route::prefix('holidays')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\HolidayController::class, 'index']);
+    });
+
+    Route::prefix('week-days')->group(function () {
+        Route::get('/', [WeekDayController::class, 'index']);
+        Route::get('/{id}', [WeekDayController::class, 'show']);
+        Route::post('/', [WeekDayController::class, 'store']);
+        Route::put('/{id}', [WeekDayController::class, 'update']);
+        Route::delete('/{id}', [WeekDayController::class, 'destroy']);
+    });
+
+
+    Route::get('/check-version', [App\Http\Controllers\Api\VersionController::class, 'check']);
 
     // Statistics route
     Route::get('statistics', function () {
@@ -112,4 +168,3 @@ Route::middleware(['auth:sanctum'])->group(function () {
             ]
         ]);
     });
-    

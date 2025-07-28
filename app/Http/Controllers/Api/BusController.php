@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bus;
+use App\Models\Guardian;
+use App\Models\Branch;
+use App\Models\Student;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -163,4 +167,171 @@ class BusController extends Controller
             'message' => 'تم حذف الحافلة بنجاح'
         ]);
     }
+
+    public function getBusesByGuardianAndSchool(Request $request)
+    {
+        $request->validate([
+            'school_id' => 'required|exists:schools,id',
+            'user_id' => 'required|exists:users,id', // ✅ طلب user_id بدل guardian_id
+        ]);
+
+        // ✅ جلب Guardian حسب user_id و school_id
+        $guardian = \App\Models\Guardian::with(['students.bus' => function ($query) use ($request) {
+            $query->where('school_id', $request->school_id);
+        }])
+        ->where('user_id', $request->user_id)
+        ->where('school_id', $request->school_id)
+        ->first();
+
+        if (!$guardian) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم يتم العثور على بيانات ولي الأمر.',
+            ], 404);
+        }
+
+        // ✅ استخراج الباصات من الطلاب المرتبطين
+        $buses = $guardian->students
+            ->filter(fn($student) => $student->bus && $student->bus->school_id == $request->school_id)
+            ->pluck('bus')
+            ->unique('id')
+            ->values()
+            ->map(function ($bus) {
+                return [
+                    'id' => $bus->id,
+                    'number' => $bus->number,
+                    'plate_number' => $bus->plate_number,
+                    'capacity' => $bus->capacity,
+                    'available_seats' => $bus->available_seats,
+                    'school' => optional($bus->school)->name_ar,
+                    'branch' => optional($bus->branch)->name_ar,
+                    'driver' => optional($bus->driver)->name,
+                    'supervisor' => optional($bus->supervisor)->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'buses' => $buses,
+        ]);
+    }
+
+public function getStudentsWithBusesByGuardianAndSchool(Request $request)
+{
+    $request->validate([
+        'school_id' => 'required|exists:schools,id',
+        'user_id' => 'required|exists:users,id',
+    ]);
+
+    // جلب ولي الأمر مع الطلاب وباص كل طالب في المدرسة المحددة
+    $guardian = \App\Models\Guardian::with(['students.bus' => function ($query) use ($request) {
+        $query->where('school_id', $request->school_id)
+              ->with(['branch', 'driver']); // تأكد من جلب الفرع والسائق
+    }])
+    ->where('user_id', $request->user_id)
+    ->where('school_id', $request->school_id)
+    ->first();
+
+    if (!$guardian) {
+        return response()->json([
+            'success' => false,
+            'message' => 'لم يتم العثور على بيانات ولي الأمر.',
+        ], 404);
+    }
+
+    // جلب الطلاب مع معلومات الباص الخاص بكل طالب (إن وجد)
+    $students = $guardian->students->map(function ($student) use ($request) {
+        $bus = $student->bus && $student->bus->school_id == $request->school_id ? $student->bus : null;
+
+        return [
+            'student_id' => $student->id,
+            'name_ar' => $student->name_ar,
+            'latitude' => $student->latitude,
+            'longitude' => $student->longitude,
+            'bus' => $bus ? [
+                'id' => $bus->id,
+                'number' => $bus->number,
+                'plate_number' => $bus->plate_number,
+                'capacity' => $bus->capacity,
+                'available_seats' => $bus->available_seats,
+                'school' => optional($bus->school)->name_ar,
+                'branch' => optional($bus->branch)->name_ar,
+                'branch_latitude' => optional($bus->branch)->latitude,
+                'branch_longitude' => optional($bus->branch)->longitude,
+                'driver' => $bus->driver ? [
+                    'id' => optional($bus->supervisor)->name,
+                    'name' => $bus->driver->name,
+                    'phone' => $bus->driver->phone,
+                ] : null,
+                'supervisor' => optional($bus->supervisor)->name,
+            ] : null,
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'students' => $students,
+    ]);
 }
+    public function getDriverBranches(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        // نجلب الفروع المرتبطة بباصات هذا السائق وهذه المدرسة
+        $branches = Branch::whereHas('buses', function ($query) use ($validated) {
+            $query->where('driver_id', $validated['user_id'])
+                ->where('school_id', $validated['school_id'])
+                ->whereNotNull('branch_id');
+        })
+        ->select('id', 'name_ar', 'name_en')
+        ->distinct()
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'branches' => $branches,
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+}
+
+
+    public function getStudentsByDriverAndBranch(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'driver_id'  => 'required|exists:users,id',
+        'school_id'  => 'required|exists:schools,id',
+        'branch_id'  => 'nullable|exists:branches,id',
+    ]);
+
+    $students = Student::with([
+        'school',
+        'branch',
+        'gradeClass',
+        'academicBand.gate',
+        'guardians',
+        'supervisors',
+        'bus',
+    ])
+    ->whereNotNull('bus_id') // الطلاب المرتبطين بباص
+    ->where('school_id', $validated['school_id'])
+    // ->when($validated['branch_id'], function ($query, $branchId) {
+    //     $query->where('branch_id', $branchId);
+    // })
+    ->whereHas('bus', function ($query) use ($validated) {
+        $query->where('driver_id', $validated['driver_id']);
+    })
+    ->orderBy('name_ar')
+    ->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب الطلاب المرتبطين بالسائق بنجاح',
+        'data' => $students,
+        'count' => $students->count(),
+    ], 200, [], JSON_UNESCAPED_UNICODE);
+}
+
+
+    }

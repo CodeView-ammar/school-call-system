@@ -54,10 +54,7 @@ class SchoolClass extends Model
         return $this->belongsTo(Grade::class);
     }
 
-    public function students(): HasMany
-    {
-        return $this->hasMany(Student::class);
-    }
+
 
     public function classSchedules(): HasMany
     {

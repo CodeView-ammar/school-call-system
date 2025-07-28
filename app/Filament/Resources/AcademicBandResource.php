@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AcademicBandResource\Pages;
 use App\Models\AcademicBand;
 use App\Models\School;
+use App\Models\Gate;
+
 use App\Models\EducationLevel;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -42,16 +44,28 @@ class AcademicBandResource extends Resource
 
                  Forms\Components\Select::make('school_id')
                     ->label('المدرسة')
-                    ->options(\App\Models\School::pluck('name_ar', 'id'))
+                    ->options(School::pluck('name_ar', 'id'))
                     ->default(auth()->user()?->school_id)
                     ->disabled(fn () => auth()->user()?->school_id !== null)
                     ->hidden(fn () => auth()->user()?->school_id !== null)
-                    ->required(),
-                Forms\Components\Select::make('education_level_id')
-                    ->label('المراحل التعليمية')
-                    ->relationship('educationLevel', 'name_ar')
-                    ->required(),
-
+                    ->required()
+                    ->reactive(), 
+                    
+                    Forms\Components\Select::make('gate_id')
+                    ->label('البوابة')
+                    ->options(function (callable $get) {
+                        $schoolId = $get('school_id');
+                        return $schoolId
+                            ? Gate::where('school_id', $schoolId)->pluck('name', 'id')
+                            : [];
+                    })
+                    ->searchable()
+                    ->required()
+                    ->disabled(fn (callable $get) => $get('school_id') === null),
+                    Forms\Components\Select::make('education_level_id')
+                        ->label('المرحلة الدراسية')
+                        ->relationship('educationLevel', 'name_ar')
+                        ->required(),
                 Forms\Components\TextInput::make('name_ar')
                     ->label('الاسم العربي')
                     ->required()
@@ -88,7 +102,7 @@ class AcademicBandResource extends Resource
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('educationLevel.name_ar')
-                    ->label('المرحلة التعليمية')
+                    ->label('المرحلة الدراسية')
                     ->searchable()
                     ->sortable(),
                     
@@ -119,7 +133,7 @@ class AcademicBandResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('education_level_id')
-                    ->label('المرحلة التعليمية')
+                    ->label('المرحلة الدراسية')
                     ->options(EducationLevel::query()->pluck('name_ar', 'id'))
                     ->searchable()
                     ->preload(),
@@ -144,8 +158,8 @@ class AcademicBandResource extends Resource
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('حذف المحدد'),
                 ]),
-            ])
-            ->defaultSort('grade_order', 'asc');
+            ]);
+            // ->defaultSort('grade_order', 'asc');
     }
 
 

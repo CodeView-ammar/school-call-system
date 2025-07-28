@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
+
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Call - نظام النداء الذكي للمدارس</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,6 +43,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
+@livewireStyles
 </head>
 <body class="bg-white">
     <!-- Navigation -->
@@ -338,4 +340,6 @@
         });
     </script>
 </body>
+
+@livewireScripts
 </html>

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\School;
+use App\Models\Student;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -149,4 +151,41 @@ class SchoolController extends Controller
             'data' => $stats,
         ]);
     }
+    /**
+ * جلب الفصول المرتبطة بمدرسة محددة
+ */
+public function classes(Request $request, School $school): JsonResponse
+{
+    $query = $school->gradeClasses()->with(['academicBand']);
+
+    // فلترة حسب الفرع إن وُجد
+    if ($request->has('branch_id')) {
+        $query->where('branch_id', $request->branch_id);
+    }
+
+    $classes = $query->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب الفصول الدراسية الخاصة بالمدرسة بنجاح',
+        'data' => $classes,
+    ]);
+}
+
+public function studentsByBranch(Request $request, $branchId): JsonResponse
+{
+    $students = Student::with(['school', 'branch', 'gradeClass'])
+        ->where('branch_id', $branchId)
+        ->where('grade_class_id', $request->grade_class_id)
+        ->where('is_active', true)
+        ->where('school_id', $request->school_id)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب الطلاب المرتبطين بالفرع بنجاح',
+        'data' => $students,
+    ]);
+}
+
 }

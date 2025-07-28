@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 class EditStudent extends EditRecord
 {
     protected static string $resource = StudentResource::class;
+    public ?float $latitude = null;
+        public ?float $longitude = null;
 
     protected function getHeaderActions(): array
     {
@@ -19,17 +21,24 @@ class EditStudent extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // التأكد من تحميل البيانات بشكل صحيح
+        $this->latitude = $data['latitude'] ?? null;
+        $this->longitude = $data['longitude'] ?? null;
+
         return $data;
     }
 
+ 
+ 
     protected function mutateFormDataBeforeSave(array $data): array
     {
         // التأكد من وجود school_id
         if (!isset($data['school_id']) || empty($data['school_id'])) {
             $data['school_id'] = auth()->user()->school_id;
         }
+        $data['latitude'] = $this->latitude;
+        $data['longitude'] = $this->longitude;
 
         return $data;
     }
 }
+

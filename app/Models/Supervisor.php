@@ -15,9 +15,7 @@ class Supervisor extends Model
 
     protected $fillable = [
         'school_id',
-        'branch_id',
         'user_id',
-        'employee_id',
         'name',
         'phone',
         'email',
@@ -42,24 +40,23 @@ class Supervisor extends Model
     }
     public function guardians()
     {
-        return $this->belongsToMany(Guardian::class, 'guardian_supervisor');
+        return $this->belongsToMany(Guardian::class, 'guardian_supervisor')
+                    ->withPivot(['assigned_date']) // لو عندك عمود assigned_date في الجدول الوسيط
+                    ->withTimestamps();
     }
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
-    }
+  
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function buses(): BelongsToMany
-    {
-        return $this->belongsToMany(Bus::class, 'supervisor_buses')
-                    ->withPivot(['assigned_at', 'is_primary'])
-                    ->withTimestamps();
-    }
+    // public function buses(): BelongsToMany
+    // {
+    //     return $this->belongsToMany(Bus::class, 'supervisor_buses')
+    //                 ->withPivot(['assigned_at', 'is_primary'])
+    //                 ->withTimestamps();
+    // }
 
     public function callSessions(): HasMany
     {
@@ -70,7 +67,9 @@ class Supervisor extends Model
 
     public function students()
     {
-        return $this->belongsToMany(Student::class, 'student_supervisor');
+        return $this->belongsToMany(Student::class, 'student_supervisor')
+            ->withPivot('assigned_date')
+            ->orderBy('student_supervisor.assigned_date', 'desc');
     }
 
     // Accessors

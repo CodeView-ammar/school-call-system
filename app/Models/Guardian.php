@@ -20,6 +20,7 @@ class Guardian extends Model
         'relationship',
         'address_ar',
         'address_en',
+        "user_id",
         'is_active',
     ];
 
@@ -27,6 +28,10 @@ class Guardian extends Model
         'is_active' => 'boolean',
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
     // العلاقات
     public function school()
     {

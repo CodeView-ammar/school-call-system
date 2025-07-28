@@ -47,12 +47,20 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح',
             'user' => [
+
                 'id' => $user->id,
-                'name' => $user->full_name,
+                "phone"=>$user->phone,
+                'name' => $user->name,
                 'email' => $user->email,
                 'user_type' => $user->user_type,
+                "name_ar"=>$user->name_ar,
+                "name_en"=>$user->name_en,
                 'school_id' => $user->school_id,
+                'branch_ids'=>$user->branch_id,
                 'permissions' => $user->getAllPermissions()->pluck('name'),
+                "is_active"=>$user->is_active,
+                "can_manage_school"=>$user->can_manage_school,
+                "school_permissions"=>$user->school_permissions,
                 'roles' => $user->getRoleNames(),
             ],
             'token' => $token,
@@ -81,7 +89,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => [
                 'id' => $user->id,
-                'name' => $user->full_name,
+                'name' => $user->name,
                 'name_ar' => $user->name_ar,
                 'name_en' => $user->name_en,
                 'email' => $user->email,
@@ -143,7 +151,7 @@ class AuthController extends Controller
             'message' => 'تم تحديث البيانات بنجاح',
             'user' => [
                 'id' => $user->id,
-                'name' => $user->full_name,
+                'name' => $user->name,
                 'name_ar' => $user->name_ar,
                 'name_en' => $user->name_en,
                 'email' => $user->email,

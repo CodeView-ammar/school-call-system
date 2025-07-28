@@ -40,11 +40,12 @@ class Branch extends Model
     {
         return $this->hasMany(WeekDay::class);
     }
-    
-    public function schoolClasses()
+
+    public function gradeClass()
     {
-        return $this->hasMany(SchoolClass::class);
+        return $this->hasMany(GradeClass::class);
     }
+
     
     public function buses()
     {
@@ -66,11 +67,7 @@ class Branch extends Model
         return $query->where('school_id', $schoolId);
     }
     
-    public function supervisors()
-    {
-        return $this->hasMany(Supervisor::class);
-    }
-    
+
     public function drivers()
     {
         return $this->hasMany(Driver::class);

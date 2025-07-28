@@ -193,7 +193,6 @@ class StudentsRelationManager extends RelationManager
                         ->modalHeading('فصل الطلاب المحددين')
                         ->modalDescription('هل أنت متأكد من فصل جميع الطلاب المحددين من هذا المساعد؟'),
                 ]),
-            ])
-            ->defaultSort('pivot.assigned_date', 'desc');
+            ]);
     }
 }

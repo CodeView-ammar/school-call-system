@@ -18,10 +18,10 @@ class WeekDayResource extends Resource
     protected static ?string $model = WeekDay::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
-    protected static ?string $navigationLabel = 'أيام الأسبوع';
-    protected static ?string $modelLabel = 'يوم أسبوع';
-    protected static ?string $pluralModelLabel = 'أيام الأسبوع';
-    protected static ?string $navigationGroup = 'إدارة التوقيت';
+    protected static ?string $navigationLabel = 'الاستعداد والانصراف';
+    protected static ?string $modelLabel = 'الاستعداد والانصراف';
+    protected static ?string $pluralModelLabel = 'الاستعداد والانصراف';
+    protected static ?string $navigationGroup = 'الاستعداد والانصراف';
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
@@ -99,12 +99,12 @@ public static function form(Form $form): Form
                                 ->required(),
 
                             Forms\Components\TimePicker::make('time_from')
-                                ->label('من الساعة')
+                                ->label('موعد الاستعداد')
                                 ->required()
                                 ->seconds(false),
 
                             Forms\Components\TimePicker::make('time_to')
-                                ->label('إلى الساعة')
+                                ->label('موعد الانصراف')
                                 ->required()
                                 ->seconds(false),
                         ]),
@@ -117,7 +117,7 @@ public static function form(Form $form): Form
                         ->schema([
                             Forms\Components\Toggle::make('day_inactive')
                                 ->label('نشط')
-                                ->default([true]),
+                                ->default(true),
                 ]),
 
                 ]),
@@ -146,23 +146,17 @@ public static function form(Form $form): Form
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('time_from')
-                    ->label('من الساعة')
+                    ->label('موعد الاستعداد')
                     ->time('H:i')
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('time_to')
-                    ->label('إلى الساعة')
+                    ->label('موعد الانصراف')
                     ->time('H:i')
                     ->sortable(),
                     
-                Tables\Columns\IconColumn::make('day_inactive')
-                    ->label('نشط')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-x-circle')
-                    ->falseIcon('heroicon-o-check-circle')
-                    ->trueColor('danger')
-                    ->falseColor('success'),
-                    
+                Tables\Columns\BooleanColumn::make('day_inactive') // استخدام BooleanColumn هنا
+                    ->label('نشط'),
                     
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')

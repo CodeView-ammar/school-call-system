@@ -12,28 +12,34 @@ class GradeClass extends Model
     use HasFactory;
 
     protected $fillable = [
-        'education_level_id',
+        'academic_band_id',
         'name_ar',
         'name_en',
         'code',
         'is_active',
-        "school_id",    
+        "branch_id",
+        "school_id",
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
-    // العلاقات
-    public function educationLevel(): BelongsTo
-    {
-        return $this->belongsTo(EducationLevel::class);
-    }
-
-    public function students(): HasMany
+    public function students()
     {
         return $this->hasMany(Student::class, 'school_class_id');
     }
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+    // العلاقات
+    
+    public function academicBand()
+    {
+        return $this->belongsTo(AcademicBand::class, 'academic_band_id');
+    }
+    
 
     public function school(): BelongsTo
     {

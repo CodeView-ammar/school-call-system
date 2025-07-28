@@ -250,24 +250,18 @@ class UserController extends Controller
     /**
      * تغيير كلمة المرور
      */
-    public function changePassword(Request $request, $id)
+   public function changePassword(Request $request, $id)
     {
-        if (!$this->canManageUsers($request)) {
-            return response()->json(['message' => 'غير مصرح لك بالوصول لهذه البيانات'], 403);
+        // العثور على المستخدم أو إرسال خطأ 404
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'المستخدم غير موجود'], 404);
         }
 
-        $query = User::query();
-
-        // Super Admin يمكنه تغيير كلمة مرور جميع المستخدمين
-        if ($request->user()->user_type === 'super_admin') {
-            $user = $query->findOrFail($id);
-        } else {
-            // مدير المدرسة يغير كلمة مرور مستخدمي مدرسته فقط
-            $schoolId = $this->getSchoolId($request);
-            $user = $query->where('school_id', $schoolId)->findOrFail($id);
-        }
-
+        // التحقق من صحة البيانات المدخلة
         $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -278,16 +272,23 @@ class UserController extends Controller
             ], 422);
         }
 
-        $user->update([
-            'password' => Hash::make($request->password)
-        ]);
+        // التحقق من كلمة المرور القديمة
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'كلمة المرور القديمة غير صحيحة'
+            ], 403);
+        }
+
+        // تحديث كلمة المرور
+        $user->password = Hash::make($request->password);
+        $user->save();
 
         return response()->json([
+            'status' => true,
             'message' => 'تم تغيير كلمة المرور بنجاح'
-        ]);
+        ], 200);
     }
-
-    /**
+ /**
      * تفعيل/إلغاء تفعيل المستخدم
      */
     public function toggleStatus(Request $request, $id)

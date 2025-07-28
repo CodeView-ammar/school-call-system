@@ -198,6 +198,9 @@ function searchMapLocation() {
 }
 
 function getCurrentMapLocation() {
+    const spinner = document.getElementById('location-loading-spinner');
+    spinner.classList.remove('hidden');
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             function(position) {
@@ -205,13 +208,17 @@ function getCurrentMapLocation() {
                 const lng = position.coords.longitude;
                 updateBranchMarkerPosition(lat, lng);
                 branchMap.setZoom(16);
+                spinner.classList.add('hidden');
             },
             function(error) {
                 alert('لا يمكن تحديد موقعك الحالي.');
+                spinner.classList.add('hidden');
             }
         );
     } else {
         alert('متصفحك لا يدعم تحديد الموقع.');
+        spinner.classList.add('hidden');
     }
 }
+
 </script>

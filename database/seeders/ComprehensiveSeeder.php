@@ -249,7 +249,6 @@ class ComprehensiveSeeder extends Seeder
                         [
                             'school_id' => $school->id,
                             'branch_id' => $branch->id,
-                            'school_class_id' => $class->id,
                             'code' => $studentCode,
                             'student_number' => $studentCounter,
                             'name_ar' => $randomName,

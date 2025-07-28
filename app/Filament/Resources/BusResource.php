@@ -51,38 +51,50 @@ class BusResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make(2)
                             ->schema([
-                Forms\Components\Select::make('school_id')
-                                ->label('المدرسة')
-                                ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
-                                ->default(auth()->user()?->school_id)
-                                // ->disabled(fn () => auth()->user()?->school_id !== null)
-                                ->hidden(fn () => auth()->user()?->school_id !== null)
-                                ->required()
-                                ->reactive()
-                                ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)),
+                                Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                                    ->default(auth()->user()?->school_id)
+                                    ->hidden(fn () => auth()->user()?->school_id !== null)
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $set('branch_id', null);
+                                        $set('driver_id', null); // إعادة تعيين السائق عند تغيير المدرسة
+                                    }),
 
-                            Forms\Components\Select::make('branch_id')
-                                ->label('الفرع')
-                                ->options(function (callable $get) {
-                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                                    if (!$schoolId) {
-                                        return [];
-                                    }
-                                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
-                                })
-                                ->required()
-                                ->searchable()
-                                ->preload(),
-                        Forms\Components\Select::make('driver_id')
-                            ->label('السائق')
-                            ->options(\App\Models\User::where('role', 'driver')->pluck('name', 'id'))
-                            ->searchable()
-                            ->required(false)
-                            ->helperText('ملاحظة: عند إضافة مستخدم كسائق، تأكد من منحه صلاحيات السائق في النظام.'),
+                                Forms\Components\Select::make('branch_id')
+                                    ->label('الفرع')
+                                    ->options(function (callable $get) {
+                                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                        if (!$schoolId) {
+                                            return [];
+                                        }
+                                        return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                    })
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+
+                                Forms\Components\Select::make('driver_id')
+                                    ->label('السائق')
+                                    ->options(function (callable $get) {
+                                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                        if (!$schoolId) {
+                                            return [];
+                                        }
+                                        return \App\Models\User::where('user_type', 'driver')
+                                            ->where('school_id', $schoolId)
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->searchable()
+                                    ->required(false)
+                                    ->reactive()  // تجعلها تتفاعل مع تغيرات النموذج
+                                    ->helperText('ملاحظة: عند إضافة مستخدم كسائق، تأكد من منحه صلاحيات السائق في النظام.'),
 
                         Forms\Components\Select::make('supervisor_id')
                             ->label('المشرف')
-                            ->options(\App\Models\User::where('role', 'supervisor')->pluck('name', 'id'))
+                            ->options(\App\Models\User::where('user_type', 'supervisor')->orwhere('user_type', 'driver')->pluck('name', 'id'))
                             ->searchable()
                             ->required(false)
                             ->helperText('ملاحظة: عند إضافة مستخدم كمشرف، تأكد من منحه صلاحيات المشرف في النظام.'),

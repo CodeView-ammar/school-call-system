@@ -8,13 +8,24 @@ class AcademicBand extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['school_id', 'education_level_id', 'name_ar', 'name_en', 'short_name', 'is_active'];
-
+    protected $fillable = [
+                            'school_id',
+                            'education_level_id',
+                            'name_ar',
+                            'name_en',
+                            'short_name',
+                            "gate_id",
+                            'is_active'
+                        ];
     public function school()
     {
         return $this->belongsTo(School::class);
     }
 
+    public function gate()
+    {
+        return $this->belongsTo(Gate::class);
+    }
     public function educationLevel()
     {
         return $this->belongsTo(EducationLevel::class);

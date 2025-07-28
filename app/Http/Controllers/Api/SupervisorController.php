@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Supervisor;
 use App\Models\Student;
 use App\Models\Guardian;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
@@ -90,40 +91,53 @@ class SupervisorController extends Controller
         ]);
     }
 
-    /**
-     * إنشاء مساعد جديد
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'school_id' => 'required|exists:schools,id',
-            'branch_id' => 'nullable|exists:branches,id',
-            'employee_id' => 'required|string|unique:supervisors,employee_id',
-            'name_ar' => 'required|string|max:255',
-            'name_en' => 'nullable|string|max:255',
-            'phone' => 'required|string|max:20',
-            'email' => 'nullable|email|unique:supervisors,email',
-            'national_id' => 'nullable|string|max:20|unique:supervisors,national_id',
-            'date_of_birth' => 'nullable|date|before:today',
-            'gender' => ['nullable', Rule::in(['male', 'female'])],
-            'address' => 'nullable|string',
-            'emergency_contact' => 'nullable|string|max:20',
-            'hire_date' => 'required|date',
+public function store(Request $request): JsonResponse
+{
+    // التحقق من صحة البيانات المدخلة
+    $validated = $request->validate([
+        'school_id' => 'required|exists:schools,id',
+        'name' => 'required|string|max:255',
+        'phone' => 'required|string|max:20',
+        'email' => 'nullable|email|unique:supervisors,email',
+        'position' => 'nullable|string|max:255',
+        'salary' => 'nullable|numeric|min:0',
+        'is_active' => 'boolean',
+        'students' => 'nullable|array',
+        'students.*.student_id' => 'required|exists:students,id',
+        'user_id' => 'required|exists:users,id', // إضافة هذا السطر
+    ]);
 
-            'position' => 'nullable|string|max:255',
-            'salary' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean',
-        ]);
+    // إنشاء مستخدم جديد
+    $user = User::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'phone' => $validated['phone'],
+        'user_type' => 'assistant', // تعيين نوع المستخدم
+        'password' => bcrypt("admin123"), // تعيين كلمة مرور مؤقتة
+        "school_id"=>$validated['school_id']
+    ]);
 
-        $supervisor = Supervisor::create($validated);
+    // إنشاء مساعد جديد
+    $supervisor = Supervisor::create(array_merge($validated, ['user_id' => $user->id]));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تم إنشاء المساعد بنجاح',
-            'data' => $supervisor->load('school', 'branch'),
-        ], 201);
+    // ربط الطلاب بالمساعد
+    if (isset($validated['students'])) {
+        $studentIds = array_column($validated['students'], 'student_id');
+        $supervisor->students()->sync($studentIds);
     }
+    if (isset($validated['user_id'])) {
+        $guardian = Guardian::where('user_id', $validated['user_id'])->first();
 
+        if ($guardian) {
+            $supervisor->guardians()->sync([$guardian->id]);
+        }
+    }
+    return response()->json([
+        'success' => true,
+        'message' => 'تم إنشاء المساعد بنجاح',
+        'data' => $supervisor->load('school'),
+    ], 201);
+}
     /**
      * تحديث بيانات مساعد
      */
@@ -131,8 +145,7 @@ class SupervisorController extends Controller
     {
         $validated = $request->validate([
             'school_id' => 'sometimes|exists:schools,id',
-            'branch_id' => 'nullable|exists:branches,id',
-            'employee_id' => 'sometimes|string|unique:supervisors,employee_id,' . $supervisor->id,
+
             'name_ar' => 'sometimes|string|max:255',
             'name_en' => 'nullable|string|max:255',
             'phone' => 'sometimes|string|max:20',
@@ -160,28 +173,39 @@ class SupervisorController extends Controller
     /**
      * حذف مساعد
      */
+ 
     public function destroy(Supervisor $supervisor): JsonResponse
     {
         // فصل جميع العلاقات قبل الحذف
         $supervisor->students()->detach();
         $supervisor->guardians()->detach();
-        $supervisor->buses()->detach();
+        
+        // حذف المستخدم المرتبط بالمساعد
+        if ($supervisor->user_id) {
+            $user = User::find($supervisor->user_id);
+            if ($user) {
+                $user->delete();
+            }
+        }
 
+        // حذف المساعد
         $supervisor->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'تم حذف المساعد بنجاح',
+            'message' => 'تم حذف المساعد والمستخدم المرتبط به بنجاح',
         ]);
     }
 
     /**
      * تبديل حالة تفعيل المساعد
      */
-    public function toggleStatus(Supervisor $supervisor): JsonResponse
+    public function toggleStatus($id): JsonResponse
     {
+        
+        // استرجاع المساعد باستخدام الـ ID
+        $supervisor = Supervisor::findOrFail($id);
         $supervisor->toggleStatus();
-
         return response()->json([
             'success' => true,
             'message' => 'تم تغيير حالة المساعد بنجاح',
@@ -329,4 +353,90 @@ class SupervisorController extends Controller
             'data' => $supervisors,
         ]);
     }
+    /**
+ * عرض جميع المساعدين مع الطلاب المرتبطين بهم
+ */
+public function listWithStudents(Request $request): JsonResponse
+{
+        $request->validate([
+        'school_id' => 'required|exists:schools,id',
+        'user_id' => 'required|exists:users,id', // ✅ طلب user_id بدل guardian_id
+        ]);
+
+    $query = Supervisor::with(['students' => function ($q) {
+        $q->select('students.id', 'students.name_ar', 'students.school_id');
+    }]);
+
+    // تصفية حسب المدرسة إن وجدت
+    if ($request->has('school_id')) {
+        $query->where('school_id', $request->school_id);
+    }
+    if ($request->has('user_id')) {
+        $query->where('user_id', $request->user_id);
+    }
+    dd($query->get());
+    $supervisors = $query->get();
+    
+    $result = $supervisors->map(function ($supervisor) {
+        return [
+            'id' => $supervisor->id,
+            'name' => $supervisor->name_ar ?? $supervisor->name_en,
+            'school_id' => $supervisor->school_id,
+            
+            'students' => $supervisor->students->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'branch_id' => $student->branch_id,
+                    'class_id' => $student->class_id,
+                ];
+            }),
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب قائمة المساعدين مع الطلاب',
+        'data' => $result,
+    ]);
+}
+public function getSupervisorsWithGuardiansAndStudents(Request $request)
+{
+  $query = Supervisor::with(['students' => function ($studentQuery) use ($request) {
+        // $studentQuery->with('guardians');
+
+        // فلترة الطلاب المرتبطين بولي الأمر ذو user_id
+        if ($request->has('user_id')) {
+            $studentQuery->whereHas('guardians', function ($guardianQuery) use ($request) {
+                $guardianQuery->where('user_id', $request->user_id);
+            });
+        }
+    }]);
+
+    // فلترة حسب المدرسة
+    if ($request->has('school_id')) {
+        $query->where('school_id', $request->school_id);
+    }
+
+    // فلترة حسب الحالة (نشط)
+    if ($request->has('is_active')) {
+        $query->where('is_active', $request->boolean('is_active'));
+    }
+
+    // تنفيذ الاستعلام
+    $supervisors = $query->get();
+
+    // إزالة المساعدين الذين ليس لديهم طلاب بعد الفلترة
+    $supervisors = $supervisors->filter(function ($supervisor) {
+        return $supervisor->students;
+    })->values();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب المساعدين مع الطلاب المرتبطين بولي الأمر',
+        'data' => $supervisors,
+    ]);
+}
+
+
 }

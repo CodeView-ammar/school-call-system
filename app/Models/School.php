@@ -170,4 +170,12 @@ class School extends Model
     {
         return $this->hasMany(Guardian::class);
     }
+    public function gates()
+    {
+        return $this->hasMany(Gate::class);
+    }
+    public function gradeClasses()
+{
+    return $this->hasMany(GradeClass::class);
+}
 }

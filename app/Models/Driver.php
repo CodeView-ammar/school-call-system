@@ -16,7 +16,6 @@ class Driver extends Model
         'school_id',
         'branch_id',
         'user_id',
-        'employee_id',
         'name',
         'name_ar',
         'phone',
@@ -65,10 +64,6 @@ class Driver extends Model
         return $this->hasMany(CallSession::class);
     }
 
-    public function driverShifts(): HasMany
-    {
-        return $this->hasMany(DriverShift::class);
-    }
 
     // Accessors
     public function getFullNameAttribute(): string

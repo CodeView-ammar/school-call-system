@@ -13,6 +13,7 @@ class Student extends Model
         'school_id',
         'branch_id',
         'academic_band_id',
+        'grade_class_id',
         'bus_route_id',
         'code',
         'student_number',
@@ -48,11 +49,6 @@ class Student extends Model
         return $this->belongsTo(Branch::class);
     }
     
-    public function schoolClass()
-    {
-        return $this->belongsTo(GradeClass::class, 'school_class_id');
-    }
-    
     public function bus()
     {
         return $this->belongsTo(Bus::class);
@@ -85,7 +81,10 @@ class Student extends Model
     {
         return $this->date_of_birth ? $this->date_of_birth->diffInYears(now()) : null;
     }
-    
+    public function gradeClass()
+    {
+        return $this->belongsTo(GradeClass::class, 'grade_class_id');
+    }
     public function getFullNameAttribute()
     {
         return $this->name_ar ?? $this->name_en;

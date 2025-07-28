@@ -12,21 +12,58 @@ class Attendance extends Model
 
     protected $fillable = [
         'student_id',
-        'date',
+        'school_id',
+        'branch_id',
+        'grade_class_id',
+        'call_session_id',
+        'attendance_date',
         'status',
-        'pickup_time',
+        'check_in_time',
+        'check_out_time',
         'notes',
+        'recorded_by',
+        'user_id', // تأكد من إضافة user_id
     ];
 
     protected $casts = [
-        'date' => 'date',
-        'pickup_time' => 'datetime',
+        'attendance_date' => 'date',
+        'check_in_time' => 'datetime',
+        'check_out_time' => 'datetime',
     ];
 
     // العلاقات
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function gradeClass(): BelongsTo
+    {
+        return $this->belongsTo(GradeClass::class);
+    }
+    public function callSession(): BelongsTo
+    {
+        return $this->belongsTo(CallSession::class);
+    }
+
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     // Accessors
@@ -44,7 +81,7 @@ class Attendance extends Model
     // Scopes
     public function scopeByDate($query, $date)
     {
-        return $query->whereDate('date', $date);
+        return $query->whereDate('attendance_date', $date);
     }
 
     public function scopeByStatus($query, $status)
@@ -59,7 +96,7 @@ class Attendance extends Model
 
     public function scopeToday($query)
     {
-        return $query->whereDate('date', today());
+        return $query->whereDate('attendance_date', today());
     }
 
     public function scopePresent($query)

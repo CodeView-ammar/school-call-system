@@ -5,7 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\GradeClassResource\Pages;
 use App\Filament\Resources\GradeClassResource\RelationManagers;
 use App\Models\GradeClass;
-use App\Models\EducationLevel;
+use App\Models\Branch;
+use App\Models\AcademicBand;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -22,11 +23,10 @@ class GradeClassResource extends Resource
     
     protected static ?string $navigationGroup = 'إدارة المدارس';
     
-    protected static ?string $modelLabel = 'الصف الدراسي';
-    
-    protected static ?string $pluralModelLabel = 'الصفوف الدراسية';
-    protected static ?int $navigationSort = 2;
-    protected static ?string $navigationLabel = 'الصفوف الدراسية';
+    protected static ?string $modelLabel = 'الفصل الدراسي';
+    protected static ?string $pluralModelLabel = 'الفصول الدراسية';
+    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationLabel = 'الفصول الدراسية';
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
@@ -54,14 +54,20 @@ class GradeClassResource extends Resource
                                     ->label('اسم الصف (إنجليزي)')
                                     ->required()
                                     ->maxLength(255),
-                                    
-                                Forms\Components\Select::make('education_level_id')
-                                    ->label('المرحلة التعليمية')
-                                    ->options(EducationLevel::query()->pluck('name_ar', 'id'))
+
+                                Forms\Components\Select::make('academic_band_id')
+                                    ->label('الفرقة الدراسية')
+                                    ->options(AcademicBand::query()->pluck('name_ar', 'id'))
                                     ->required()
                                     ->searchable()
                                     ->preload(),
-                                    
+                                Forms\Components\Select::make('branch_id')
+                                    ->label('الفرع')
+                                    ->options(Branch::query()->pluck('name_ar', 'id'))
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+
                                 Forms\Components\TextInput::make('grade_order')
                                     ->label('ترتيب الصف')
                                     ->numeric()
@@ -101,6 +107,7 @@ class GradeClassResource extends Resource
     {
         return $table
             ->columns([
+                
                 Tables\Columns\TextColumn::make('name_ar')
                     ->label('اسم الصف (عربي)')
                     ->searchable()
@@ -110,23 +117,22 @@ class GradeClassResource extends Resource
                     ->label('اسم الصف (إنجليزي)')
                     ->searchable()
                     ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('educationLevel.name_ar')
-                    ->label('المرحلة التعليمية')
+
+                Tables\Columns\TextColumn::make('academicBand.name_ar')
+                    ->label('الفرقة الدراسية')
                     ->searchable()
                     ->sortable(),
-                    
                 Tables\Columns\TextColumn::make('grade_order')
                     ->label('ترتيب الصف')
                     ->sortable()
                     ->alignCenter(),
                     
-                Tables\Columns\TextColumn::make('students_count')
-                    ->label('عدد الطلاب')
-                    ->counts('students')
-                    ->alignCenter()
-                    ->badge()
-                    ->color('success'),
+                // Tables\Columns\TextColumn::make('students_count')
+                //     ->label('عدد الطلاب')
+                //     ->counts('students')
+                //     ->alignCenter()
+                //     ->badge()
+                //     ->color('success'),
                     
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('الحالة')
@@ -141,6 +147,10 @@ class GradeClassResource extends Resource
                     ->dateTime('Y-m-d H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+            Tables\Columns\TextColumn::make('branch.name_ar')
+                    ->label('الفرع')
+                    ->searchable()
+                    ->sortable(),
              Tables\Columns\TextColumn::make('school.name_ar')
                 ->label('المدرسة')
                 ->searchable()
@@ -153,9 +163,9 @@ class GradeClassResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('education_level_id')
-                    ->label('المرحلة التعليمية')
-                    ->options(EducationLevel::query()->pluck('name_ar', 'id'))
+                Tables\Filters\SelectFilter::make('academic_band_id')
+                    ->label('المرحلة الدراسية')
+                    ->options(AcademicBand::query()->pluck('name_ar', 'id'))
                     ->searchable()
                     ->preload(),
                     

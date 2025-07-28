@@ -80,7 +80,10 @@ class User extends Authenticatable
                     ->withPivot(['role', 'assigned_at', 'is_active'])
                     ->withTimestamps();
     }
-    
+    public function guardian()
+    {
+        return $this->hasOne(Guardian::class);
+    }
     public function school()
     {
         return $this->belongsTo(School::class);
@@ -169,6 +172,11 @@ class User extends Authenticatable
     public function removeFromSchool(int $schoolId): void
     {
         $this->schools()->detach($schoolId);
+    }
+    
+    public function getAuthIdentifierName()
+    {
+        return 'phone';
     }
 
     public function getAccessibleSchools()

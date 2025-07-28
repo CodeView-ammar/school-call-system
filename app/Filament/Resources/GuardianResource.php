@@ -6,6 +6,8 @@ use App\Filament\Resources\GuardianResource\Pages;
 use App\Filament\Resources\GuardianResource\RelationManagers;
 use App\Filament\Resources\GuardianResource\Actions;
 use App\Models\Guardian;
+use App\Models\User;
+
 use App\Models\Student;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -31,7 +33,16 @@ class GuardianResource extends Resource
     protected static ?string $navigationGroup = 'إدارة الطلاب';
 
     protected static ?int $navigationSort = 2;
+    public static function getEloquentQuery(): Builder
+        {
+            $query = parent::getEloquentQuery();
 
+            if (auth()->user()?->school_id) {
+                $query->where('school_id', auth()->user()->school_id);
+            }
+
+            return $query;
+        }
     public static function form(Form $form): Form
     {
         return $form
@@ -48,6 +59,15 @@ class GuardianResource extends Resource
                                     ->preload()
                                     ->columnSpanFull(),
 
+                         
+                                // Forms\Components\Select::make('user_id')
+                                //     ->label('المستخدم')
+                                //     ->relationship('user', 'name') // بدل name_ar إلى name
+                                //     ->required()
+                                //     ->options(\App\Models\User::where('user_type', 'guardian')->pluck('name', 'id'))
+                                //     ->searchable()
+                                //     ->preload()
+                                //     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('name_ar')
                                     ->label('الاسم (عربي)')
                                     ->required()
@@ -85,6 +105,7 @@ class GuardianResource extends Resource
                                 'أخرى' => 'أخرى',
                             ])
                             ->required(),
+                            
                         Forms\Components\Grid::make(1)
                             ->schema([
                                 Forms\Components\Textarea::make('address_ar')
@@ -206,14 +227,30 @@ class GuardianResource extends Resource
             'index' => Pages\ListGuardians::route('/'),
             'create' => Pages\CreateGuardian::route('/create'),
             'edit' => Pages\EditGuardian::route('/{record}/edit'),
+            'view' => Pages\ViewGuardians::route('/{record}/view'),
         ];
     }
 
     public static function handleRecordCreation(array $data): Model
     {
+        // إنشاء Guardian بدون user_id
         $guardian = Guardian::create(collect($data)->except(['student_ids'])->toArray());
+        // إنشاء المستخدم
+        $user = User::create([
+            'name'      => $guardian->name_ar,
+            'email'     => $guardian->email ?? 'guardian' . $guardian->id . '@example.com',
+            'phone'     => $guardian->phone,
+            'user_type' => 'guardian',
+            'password'  => bcrypt('admin123'),
+            'is_active' => true,
+            'school_id' => $guardian->school_id,
+        ]);
 
-        // ربط الطلاب الموجودين فقط
+        // ربط Guardian بالمستخدم
+        $guardian->user_id = $user->id;
+        $guardian->save();
+
+        // ربط الطلاب
         if (!empty($data['student_ids'])) {
             $guardian->students()->attach($data['student_ids']);
         }
@@ -221,10 +258,11 @@ class GuardianResource extends Resource
         return $guardian;
     }
 
+
     public static function handleRecordUpdate(Model $record, array $data): Model
     {
         $record->update(collect($data)->except(['student_ids'])->toArray());
-
+        dd("aa");
         // مزامنة الطلاب الموجودين فقط
         if (isset($data['student_ids'])) {
             $record->students()->sync($data['student_ids']);

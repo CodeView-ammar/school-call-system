@@ -26,7 +26,7 @@ class BranchResource extends Resource
     
     protected static ?string $navigationGroup = 'إدارة المدارس';
     
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
     {
@@ -159,13 +159,13 @@ public static function form(Form $form): Form
                                 ->label('خط العرض (Latitude)')
                                 ->numeric()
                                 ->step(0.000001)
-                                ->hidden()
+                                // ->hidden()
                                 ->dehydrated(),
                             Forms\Components\TextInput::make('longitude')
                                 ->label('خط الطول (Longitude)')
                                 ->numeric()
                                 ->step(0.000001)
-                                ->hidden()
+                                // ->hidden()
                                 ->dehydrated(),
                         ]),
                 ])

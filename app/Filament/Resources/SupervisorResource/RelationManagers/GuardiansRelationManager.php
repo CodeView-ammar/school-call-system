@@ -251,7 +251,7 @@ class GuardiansRelationManager extends RelationManager
                         ->modalHeading('فصل أولياء الأمور المحددين')
                         ->modalDescription('هل أنت متأكد من فصل جميع أولياء الأمور المحددين من هذا المساعد؟'),
                 ]),
-            ])
-            ->defaultSort('pivot.assigned_date', 'desc');
+            ]);
+
     }
 }

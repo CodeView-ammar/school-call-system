@@ -309,4 +309,115 @@ class StudentController extends Controller
             'data' => $students,
         ]);
     }
+
+    /**
+     * جلب الطلاب حسب user_id و school_id و branch_id
+     */
+    public function getStudentsByUserAndSchool(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'school_id' => 'required|exists:schools,id',
+            'branch_id' => 'nullable|exists:branches,id',
+        ]);
+
+        $query = Student::with([
+                'school',
+                'branch',
+                'gradeClass', // هنا نستدعي بيانات البوابة المرتبطة بالفرقة الأكاديمية
+                'academicBand.gate', // هنا نستدعي بيانات البوابة المرتبطة بالفرقة الأكاديمية
+                'guardians',
+                'supervisors',
+                'bus',
+            ])
+            ->where('school_id', $validated['school_id']);
+
+        if (!empty($validated['branch_id'])) {
+            $query->where('branch_id', $validated['branch_id']);
+        }
+
+        $query->where(function ($q) use ($validated) {
+            $userId = $validated['user_id'];
+
+            $q->whereHas('guardians', function ($guardianQuery) use ($userId) {
+                $guardianQuery->where('user_id', $userId);
+            })->orWhereHas('supervisors', function ($supervisorQuery) use ($userId) {
+                $supervisorQuery->where('user_id', $userId);
+            });
+        });
+
+        $students = $query->orderBy('name_ar')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم جلب الطلاب بنجاح',
+            'data' => $students,
+            'count' => $students->count(),
+        ]);
+    }
+
+    /**
+     * جلب الطلاب حسب user_id و school_id و branch_id
+     */
+    public function getStudentsByUserAndSchoolnotbranch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        $query = Student::with([
+                'school',
+                'branch',
+                'gradeClass', // هنا نستدعي بيانات البوابة المرتبطة بالفرقة الأكاديمية
+                'academicBand.gate', // هنا نستدعي بيانات البوابة المرتبطة بالفرقة الأكاديمية
+                'guardians',
+                'supervisors',
+                'bus',
+            ])
+            ->where('school_id', $validated['school_id']);
+
+
+        $query->where(function ($q) use ($validated) {
+            $userId = $validated['user_id'];
+
+            $q->whereHas('guardians', function ($guardianQuery) use ($userId) {
+                $guardianQuery->where('user_id', $userId);
+            })->orWhereHas('supervisors', function ($supervisorQuery) use ($userId) {
+                $supervisorQuery->where('user_id', $userId);
+            });
+        });
+
+        $students = $query->orderBy('name_ar')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم جلب الطلاب بنجاح',
+            'data' => $students,
+            'count' => $students->count(),
+        ]);
+    }
+
+public function studentsByBranchClassSchool(Request $request): JsonResponse
+{
+    $request->validate([
+        'branch_id' => 'required|integer|exists:branches,id',
+        'school_id' => 'required|integer|exists:schools,id',
+        'grade_class_id' => 'required|integer|exists:grade_classes,id',
+    ]);
+
+    $students = Student::with(['school', 'branch', 'gradeClass'])
+        ->where('branch_id', $request->branch_id)
+        ->where('school_id', $request->school_id)
+        ->where('grade_class_id', $request->grade_class_id)  // تأكد أن هذا الحقل هو المفتاح الخارجي في جدول الطلاب
+        ->where('is_active', true)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب الطلاب حسب الفصل والفرع والمدرسة',
+        'data' => $students,
+    ]);
+}
+
 }
