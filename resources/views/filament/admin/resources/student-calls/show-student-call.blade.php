@@ -40,17 +40,17 @@
     <div class="p-4">
         <h2 class="text-lg font-bold mb-2">تفاصيل التغييرات على النداء</h2>
         @if($record->studentCallLogs->count())
-            <table class="min-w-full bg-white border rounded">
-                <thead>
-                    <tr class="bg-gray-100 text-left">
-                        <th class="py-2 px-4 border-b">الحالة</th>
-                        <th class="py-2 px-4 border-b">تم التغيير بواسطة</th>
-                        <th class="py-2 px-4 border-b">وقت التغيير</th>
+            <table class="fi-ta-table w-full table-auto divide-y divide-gray-200 text-start dark:divide-white/5 min-w-full bg-white border rounded">
+                <thead class="divide-y divide-gray-200 dark:divide-white/5">
+                    <tr class="bg-gray-50 dark:bg-white/5 bg-gray-100 text-left">
+                        <th class="fi-ta-header-cell px-3 py-3.5 sm:first-of-type:ps-6 sm:last-of-type:pe-6 ">الحالة</th>
+                        <th class="fi-ta-header-cell px-3 py-3.5 sm:first-of-type:ps-6 sm:last-of-type:pe-6 ">تم التغيير بواسطة</th>
+                        <th class="fi-ta-header-cell px-3 py-3.5 sm:first-of-type:ps-6 sm:last-of-type:pe-6 ">وقت التغيير</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
                     @foreach($record->studentCallLogs as $log)
-                        <tr>
+                        <tr class="bg-gray-50 dark:bg-white/5">
                             <td class="py-2 px-4 border-b">{{ $labels[$log->status] ?? $log->status }}</td>
                             <td class="py-2 px-4 border-b">{{ $log->changedByUser?->name ?? '—' }}</td>
                             <td class="py-2 px-4 border-b">{{ $log->changed_at->format('Y-m-d H:i:s') }}</td>

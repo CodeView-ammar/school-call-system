@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\StudentCallLogController;
 use App\Http\Controllers\Api\WeekDayController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\EarlyArrivalController;
 
 
 
@@ -41,7 +42,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('schools/{school}/classes', [SchoolController::class, 'classes']);
     Route::get('branches/{branch}/students', [SchoolController::class, 'studentsByBranch']);
     Route::get('students/filter', [StudentController::class, 'studentsByBranchClassSchool']);
-
+    
+    // 'early-arrivals'
+    Route::apiResource('early-arrivals', EarlyArrivalController::class);
+    
+    
     // Branches routes
     Route::apiResource('branches', BranchController::class);
     Route::get('branches/{branch}/statistics', [BranchController::class, 'statistics']);
@@ -90,7 +95,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Student calls routes
 
     Route::put('student-calls/{id}/status', [App\Http\Controllers\Api\StudentCallController::class, 'updateStatus']);
-    Route::get('student-calls/{student_id}/today-latest',[App\Http\Controllers\Api\StudentCallController::class, 'todayLatestByStudent']);
+    Route::get('student-calls/{student_id}/today-latest/{call_period}',[App\Http\Controllers\Api\StudentCallController::class, 'todayLatestByStudent']);
     
 
     // Student calls log routes

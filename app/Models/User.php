@@ -60,7 +60,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'can_manage_school' => 'boolean',
             'school_permissions' => 'array',
-        ];
+        ]; 
     }
 
     // العلاقات
@@ -187,4 +187,6 @@ class User extends Authenticatable
         
         return $this->schools()->wherePivot('is_active', true)->get();
     }
+
+    
 }

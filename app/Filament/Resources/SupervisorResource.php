@@ -58,15 +58,18 @@ class SupervisorResource extends Resource
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                Forms\Components\Select::make('school_id')
+                    auth()->user()?->school_id === null
+                                ? Forms\Components\Select::make('school_id')
                                     ->label('المدرسة')
-                                    ->options(School::pluck('name_ar', 'id'))
+                                    ->relationship('school', 'name_ar')
                                     ->required()
                                     ->searchable()
-                                    ->default(auth()->user()?->school_id)
-                                    ->disabled(fn () => auth()->user()?->school_id !== null)
                                     ->preload()
-                                    ->live(),
+                                : Forms\Components\Hidden::make('school_id')
+                                    ->default(auth()->user()->school_id)
+                                    ->dehydrated(true)
+                                    ->required(),
+                            
 
 
                                 Forms\Components\TextInput::make('name')
@@ -217,7 +220,8 @@ class SupervisorResource extends Resource
                     ->label('المدرسة')
                     ->options(School::pluck('name_ar', 'id'))
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn () => auth()->user()?->school_id === null), // 👈 التحقق هنا
 
               
 
@@ -444,9 +448,10 @@ class SupervisorResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('is_active', true)->count();
+        return static::getModel()::where('is_active', true)
+            ->where('school_id', auth()->user()->school_id)
+            ->count();
     }
-
 
     public static function getGloballySearchableAttributes(): array
     {

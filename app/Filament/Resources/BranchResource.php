@@ -39,143 +39,180 @@ class BranchResource extends Resource
         return $query;
     }
 
+    private static function validateBranchLimit(?int $schoolId, \Closure $fail): void
+    {
+        if (!$schoolId) {
+            $fail('يجب اختيار المدرسة.');
+             Notification::make()
+            ->title('خطأ')
+            ->body('يجب اختيار المدرسة.')
+            ->danger() // تجعل الرسالة باللون الأحمر وتُعتبر رسالة خطأ
+            ->send();
+            return;
+        }
 
-public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
-     auth()->user()?->school_id === null
-                ? Forms\Components\Select::make('school_id')
-                    ->label('المدرسة')
-                    ->relationship('school', 'name_ar')
-                    ->required()
-                    ->searchable()
-                    ->preload()
-                    ->rules([
-                        function () {
-                            return function (string $attribute, $value, \Closure $fail) {
-                                $school = \App\Models\School::find($value);
+        $school = \App\Models\School::find($schoolId);
 
-                                if (!$school) {
-                                    $fail('المدرسة غير موجودة.'); // إزالة errorBag هنا
-                                    return;
-                                }
+        if (!$school) {
+            $fail('المدرسة غير موجودة.');
+            Notification::make()
+            ->title('خطأ')
+            ->body('المدرسة غير موجودة.')
+            ->danger() // تجعل الرسالة باللون الأحمر وتُعتبر رسالة خطأ
+            ->send();
+            return;
+        }
 
-                                if (!$school->canAddMoreBranches()) {
-                                    $remaining = $school->remaining_branches;
-                                    if ($remaining === 0) {
-                                        $fail("لقد وصلت المدرسة للحد الأقصى من الفروع ({$school->max_branches} فروع).");
-                                    }
-                                }
-                            };
-                        },
-                    ])
-                    ->helperText(function (callable $get) {
-                        $schoolId = $get('school_id') ?: auth()->user()?->school_id;
-                        if (!$schoolId) return null;
+        if (!$school->canAddMoreBranches()) {
+            $fail("وصلت المدرسة للحد الأقصى من الفروع ({$school->max_branches} فروع).");
+             Notification::make()
+            ->title('خطأ')
+            ->body("وصلت المدرسة للحد الأقصى من الفروع ({$school->max_branches} فروع).")
+            ->danger() // تجعل الرسالة باللون الأحمر وتُعتبر رسالة خطأ
+            ->send();
+        }
+        
+    }
 
-                        $school = \App\Models\School::find($schoolId);
-                        if (!$school) return null;
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Group::make([
+                    auth()->user()->is_super_admin
+                        ? Forms\Components\Select::make('school_id')
+                            ->label('المدرسة')
+                            ->relationship('school', 'name_ar')
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        \App\Filament\Resources\BranchResource::validateBranchLimit($value, $fail);
+                                    };
+                                },
+                            ])
+                            ->helperText(function (callable $get) {
+                                $schoolId = $get('school_id');
+                                if (!$schoolId) return null;
 
-                        if ($school->allow_unlimited_branches) {
-                            return 'هذه المدرسة لديها عدد غير محدود من الفروع.';
-                        }
+                                $school = \App\Models\School::find($schoolId);
+                                if (!$school) return null;
 
-                        $remaining = $school->remaining_branches;
-                        return "الفروع المتبقية: {$remaining} من أصل {$school->max_branches}";
-                    })
-                : Forms\Components\Hidden::make('school_id')
-                    ->default(auth()->user()->school_id)
-                    ->dehydrated(true)
-                    ->required()
-                    ->rules([
-                        function () {
-                            return function (string $attribute, $value, \Closure $fail) {
-                                if (empty($value)) {
-                                    $fail('يجب تعيين school_id.'); // إزالة errorBag هنا
-                                    return;
-                                }
-                                
-                                $school = \App\Models\School::find($value);
-                                if (!$school) {
-                                    $fail('المدرسة غير موجودة.'); // إزالة errorBag هنا
-                                    return;
-                                }
-                                
-                        $remaining = $school->max_branches - $school->branches()->count();
+                                return $school->allow_unlimited_branches
+                                    ? 'هذه المدرسة لديها عدد غير محدود من الفروع.'
+                                    : "الفروع المتبقية: {$school->remaining_branches} من أصل {$school->max_branches}";
+                            })
+                        : Forms\Components\Hidden::make('school_id')
+                            ->default(auth()->user()?->school_id)
+                            ->dehydrated(true)
+                            ->required()
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        
+                                        \App\Filament\Resources\BranchResource::validateBranchLimit($value, $fail);
+                                    
+                                    };
+                                },
+                            ])
+                 ])->columnSpanFull(),
+            
+            
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('name_ar')
+                            ->label('اسم الفرع (عربي)')
+                            ->required()
+                            ->maxLength(255)
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        $schoolId = request()->input('school_id') ?? auth()->user()->school_id;
+                                        $exists = \App\Models\Branch::where('school_id', $schoolId)
+                                            ->where('name_ar', $value)
+                                            ->when(request()->route('record'), function ($query, $recordId) {
+                                                $query->where('id', '!=', $recordId);
+                                            })
+                                            ->exists();
 
-                        // تحقق مما إذا كانت المدرسة يمكنها إضافة المزيد من الفروع
-                        if ($remaining <= 0) {
-                        Notification::make()
-                            ->title("لقد وصلت المدرسة للحد الأقصى من الفروع ({$school->max_branches} فروع).")
-                            ->danger()
-                            ->send();
-                        $fail("لقد وصلت المدرسة للحد الأقصى من الفروع ({$school->max_branches} فروع).");
-                        return;
-                        }
-                    };
-                },
+                                        if ($exists) {
+                                            $fail('اسم الفرع موجود مسبقًا لهذه المدرسة.');
+                                        }
+                                    };
+                                },
+                            ]),
+                        Forms\Components\TextInput::make('name_en')
+                            ->label('Branch Name (English)')
+                            ->maxLength(255),
                     ]),
-            Forms\Components\Grid::make(2)
-                ->schema([
-                    Forms\Components\TextInput::make('name_ar')
-                        ->label('اسم الفرع (عربي)')
-                        ->required()
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('name_en')
-                        ->label('Branch Name (English)')
-                        ->maxLength(255),
-                ]),
-            Forms\Components\Grid::make(2)
-                ->schema([
-                    Forms\Components\TextInput::make('code')
-                        ->label('كود الفرع')
-                        ->required()
-                        ->unique(ignoreRecord: true)
-                        ->maxLength(10),
-                    Forms\Components\FileUpload::make('logo')
-                        ->label('شعار الفرع')
-                        ->image()
-                        ->directory('branch-logos'),
-                ]),
-            Forms\Components\Grid::make(1)
-                ->schema([
-                    Forms\Components\Textarea::make('address_ar')
-                        ->label('العنوان (عربي)')
-                        ->rows(3),
-                    Forms\Components\Textarea::make('address_en')
-                        ->label('Address (English)')
-                        ->rows(3),
-                ]),
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('code')
+                            ->label('كود الفرع')
+                            ->required()
+                            ->maxLength(10)
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        $schoolId = request()->input('school_id') ?? auth()->user()->school_id;
+                                        $exists = \App\Models\Branch::where('school_id', $schoolId)
+                                            ->where('code', $value)
+                                            ->when(request()->route('record'), function ($query, $recordId) {
+                                                $query->where('id', '!=', $recordId);
+                                            })
+                                            ->exists();
 
-            Forms\Components\Section::make('الموقع والخريطة')
-                ->description('حدد موقع الفرع على الخريطة')
-                ->schema([
-                    Forms\Components\View::make('filament.forms.components.simple-map'),
+                                        if ($exists) {
+                                            $fail('كود الفرع موجود مسبقًا لهذه المدرسة.');
+                                        }
+                                    };
+                                },
+                            ]),
+                        Forms\Components\FileUpload::make('logo')
+                            ->label('شعار الفرع')
+                            ->image()
+                            ->directory('branch-logos'),
+                    ]),
+                Forms\Components\Grid::make(1)
+                    ->schema([
+                        Forms\Components\Textarea::make('address_ar')
+                            ->label('العنوان (عربي)')
+                            ->rows(3),
+                        Forms\Components\Textarea::make('address_en')
+                            ->label('Address (English)')
+                            ->rows(3),
+                    ]),
 
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('latitude')
-                                ->label('خط العرض (Latitude)')
-                                ->numeric()
-                                ->step(0.000001)
-                                // ->hidden()
-                                ->dehydrated(),
-                            Forms\Components\TextInput::make('longitude')
-                                ->label('خط الطول (Longitude)')
-                                ->numeric()
-                                ->step(0.000001)
-                                // ->hidden()
-                                ->dehydrated(),
-                        ]),
-                ])
-                ->collapsible()
-                ->collapsed(false),
-            Forms\Components\Toggle::make('is_active')
-                ->label('نشط')
-                ->default(true),
-                    ]);
-}
+                Forms\Components\Section::make('الموقع والخريطة')
+                    ->description('حدد موقع الفرع على الخريطة')
+                    ->schema([
+                        Forms\Components\View::make('filament.forms.components.simple-map'),
+
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('latitude')
+                                    ->label('خط العرض (Latitude)')
+                                    ->numeric()
+                                    ->step(0.000001)
+                                    // ->hidden()
+                                    ->dehydrated(),
+                                Forms\Components\TextInput::make('longitude')
+                                    ->label('خط الطول (Longitude)')
+                                    ->numeric()
+                                    ->step(0.000001)
+                                    // ->hidden()
+                                    ->dehydrated(),
+                            ]),
+                    ])
+                    ->collapsible()
+                    ->collapsed(false),
+                Forms\Components\Toggle::make('is_active')
+                    ->label('نشط')
+                    ->default(true),
+                        ]);
+    }
 
     public static function table(Table $table): Table
     {

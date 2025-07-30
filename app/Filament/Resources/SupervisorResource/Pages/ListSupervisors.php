@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SupervisorResource\Pages;
 
 use App\Filament\Resources\SupervisorResource;
+use App\Models\Supervisor;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Resources\Components\Tab;
@@ -22,23 +23,31 @@ class ListSupervisors extends ListRecords
 
     public function getTabs(): array
     {
+        $schoolId = auth()->user()->school_id;
+
         return [
             'all' => Tab::make('جميع المساعدين')
-                ->badge(fn () => \App\Models\Supervisor::count()),
+                ->badge(fn () => Supervisor::where('school_id', $schoolId)->count()),
 
             'active' => Tab::make('النشطون')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true))
-                ->badge(fn () => \App\Models\Supervisor::where('is_active', true)->count())
+                ->modifyQueryUsing(fn (Builder $query) => 
+                    $query->where('is_active', true)->where('school_id', $schoolId)
+                )
+                ->badge(fn () => Supervisor::where('is_active', true)->where('school_id', $schoolId)->count())
                 ->badgeColor('success'),
 
             'inactive' => Tab::make('غير النشطين')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
-                ->badge(fn () => \App\Models\Supervisor::where('is_active', false)->count())
+                ->modifyQueryUsing(fn (Builder $query) => 
+                    $query->where('is_active', false)->where('school_id', $schoolId)
+                )
+                ->badge(fn () => Supervisor::where('is_active', false)->where('school_id', $schoolId)->count())
                 ->badgeColor('danger'),
 
             'recent' => Tab::make('المضافون حديثاً')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('created_at', '>=', now()->subWeek()))
-                ->badge(fn () => \App\Models\Supervisor::where('created_at', '>=', now()->subWeek())->count())
+                ->modifyQueryUsing(fn (Builder $query) => 
+                    $query->where('created_at', '>=', now()->subWeek())->where('school_id', $schoolId)
+                )
+                ->badge(fn () => Supervisor::where('created_at', '>=', now()->subWeek())->where('school_id', $schoolId)->count())
                 ->badgeColor('info'),
         ];
     }

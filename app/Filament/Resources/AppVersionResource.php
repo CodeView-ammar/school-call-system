@@ -26,7 +26,18 @@ class AppVersionResource extends Resource
 
     protected static ?string $model = AppVersion::class;
 
+
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    
+    protected static ?string $navigationLabel = 'إدارة الاصدارات';
+    
+    protected static ?string $modelLabel = 'الاصدارات';
+    
+    protected static ?string $pluralModelLabel = 'إدارة الاصدارات';
+    
+    protected static ?int $navigationSort = 3;
+    
+    protected static ?string $navigationGroup = 'إدارة النظام';
 
     
     // إظهار الصفحة للمدير الأساسي فقط

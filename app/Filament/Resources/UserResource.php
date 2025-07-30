@@ -77,6 +77,14 @@ class UserResource extends Resource
                             ->label('الاسم')
                             ->required()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('name_ar')
+                            ->label('الاسم العربي')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('name_en')
+                            ->label('الاسم الاجنبي')
+                            ->maxLength(255),
+                            
+
                         Forms\Components\TextInput::make('email')
                             ->label('البريد الإلكتروني')
                             ->email()

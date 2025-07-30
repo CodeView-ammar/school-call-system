@@ -16,24 +16,25 @@ class StudentCallController extends Controller
     public function index(Request $request)
     {
         $query = StudentCall::with(['student', 'school','student.gradeClass', 'branch']);
-        
         // تصفية حسب المدرسة
         if ($request->has('school_id')) {
             $query->where('school_id', $request->school_id);
         }
-
         // تصفية حسب الفرع
         if ($request->has('branch_id')) {
             $query->where('branch_id', $request->branch_id);
         }
-
+        
         // تصفية حسب الفصل
         if ($request->has('grade_class_id')) {
             $query->whereHas('student', function ($q) use ($request) {
                 $q->where('grade_class_id', $request->grade_class_id);
             });
         }
-
+        
+        if($request->has('call_period'))
+            $query->where('call_period', $request->call_period);
+            // dd($request->call_period);
           // فلترة حسب الطالب
         if ($request->filled('student_id')) {
             $query->where('student_id', $request->student_id);
@@ -71,22 +72,28 @@ class StudentCallController extends Controller
                 'branch_id' => 'required|integer|exists:branches,id',
                 'user_id' => 'required|integer|exists:users,id',
                 'call_cdate' => 'required|date',
-                'status' => 'required|string|in:prepare,leave,with_teacher,to_gate,received,canceled',
+                'status' => 'required|string',
                 'caller_type' => 'required|string|in:guardian,assistant,bus,supervisor',
                 'call_level' => 'nullable|string|in:normal,urgent',
                 'notes' => 'nullable|string',
+                "call_period"=> 'nullable|string',
             ]);
-
             DB::beginTransaction();
-
+            
             // استخراج تاريخ فقط (بدون وقت) من call_cdate
             $callDate = Carbon::parse($validatedData['call_cdate'])->format('Y-m-d');
-
+            
+            if(!$request->has('call_period'))    
+            {
+                    // dd($request);
+                $validatedData['call_period'] = 'evening';
+            }
             // تحقق إذا كان هناك نداء لنفس الطالب في نفس اليوم
             $existingCall = StudentCall::where('student_id', $validatedData['student_id'])
-                ->whereDate('call_cdate', $callDate)
-                ->first();
-
+            ->whereDate('call_cdate', $callDate)
+            ->where("call_period",$validatedData['call_period'])
+            ->first();
+            
             if ($existingCall) {
                 DB::rollBack();
                 return response()->json([
@@ -96,10 +103,9 @@ class StudentCallController extends Controller
                         'call_id' => $existingCall->call_id,
                         'status' => $existingCall->status,
                         'existing' => true
-                    ]
-                ], 200);
-            }
-
+                        ]
+                    ], 200);
+                }
             // إنشاء نداء جديد
             $studentCall = StudentCall::create($validatedData);
 
@@ -289,13 +295,14 @@ class StudentCallController extends Controller
         }
     }
 
-    public function todayLatestByStudent($studentId): JsonResponse
+    public function todayLatestByStudent($studentId,$call_period): JsonResponse
     {
         try {
             $today = Carbon::today();
 
             // ابحث عن آخر نداء لهذا الطالب في تاريخ اليوم
             $call = StudentCall::where('student_id', $studentId)
+                ->where("call_period",$call_period)
                 ->whereDate('call_cdate', $today)
                 ->with(['student', 'school', 'branch'])
                 ->latest('call_cdate')

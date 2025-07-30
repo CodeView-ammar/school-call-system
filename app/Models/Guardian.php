@@ -55,8 +55,11 @@ class Guardian extends Model
     {
         return $this->name_ar ?? $this->name_en;
     }
-
-    public function getRelationshipLabelAttribute(): string
+    public function earlyArrivals()
+    {
+        return $this->hasMany(EarlyArrival::class);
+    }
+    public function getRelationshipLabelAttribute(): string 
     {
         return match($this->relationship) {
             'father' => 'والد',

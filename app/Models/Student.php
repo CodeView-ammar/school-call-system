@@ -81,6 +81,10 @@ class Student extends Model
     {
         return $this->date_of_birth ? $this->date_of_birth->diffInYears(now()) : null;
     }
+    public function earlyArrivals()
+    {
+        return $this->hasMany(EarlyArrival::class);
+    }
     public function gradeClass()
     {
         return $this->belongsTo(GradeClass::class, 'grade_class_id');
@@ -105,5 +109,5 @@ class Student extends Model
     {
         return $query->where('gender', $gender);
     }
-    
+
 }

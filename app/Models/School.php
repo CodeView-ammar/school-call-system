@@ -48,7 +48,10 @@ class School extends Model
     {
         return $this->hasMany(Branch::class);
     }
-
+    public function earlyArrivals()
+    {
+        return $this->hasMany(EarlyArrival::class);
+    }
     public function getFullNameAttribute(): string
     {
         return $this->name_ar ?? $this->name_en;
@@ -70,7 +73,7 @@ class School extends Model
         return $this->hasMany(User::class);
     }
 
-    // المستخدمين المرتبطين بالمدرسة
+     // المستخدمين المرتبطين بالمدرسة
     public function roles()
     {
         return $this->hasMany(Role::class);

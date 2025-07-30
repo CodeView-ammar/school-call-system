@@ -10,8 +10,9 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Widgets;
-use Filament\Support\Facades\FilamentView;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -31,8 +32,14 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Smart Call - نظام النداء الذكي')
             ->favicon('/favicon.ico')
+            ->font('tajawal', 'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap')
             ->colors([
                 'primary' => Color::Blue,
+                'danger' => Color::Red,
+                'gray' => Color::Gray,
+                'info' => Color::Blue,
+                'success' => Color::Emerald,
+                'warning' => Color::Orange,
             ])
             ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -47,6 +54,30 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AttendanceChart::class,
                 \App\Filament\Widgets\LatestSchoolsWidget::class,
             ])
+            ->navigationGroups([
+                NavigationGroup::make()->label('نظام النداء الذكي'),
+                NavigationGroup::make()->label('المحتوى'),
+                NavigationGroup::make()->label('الإشعارات'),
+                NavigationGroup::make()->label('الإعدادات'),
+            ])
+            ->navigationItems([
+                // مثال على عنصر تنقل مع صلاحية
+                NavigationItem::make('roles')
+                    ->label('المجموعات والصلاحيات')
+                    ->url('/admin/shield/roles')
+                    ->icon('heroicon-o-users')
+                    ->group('الإعدادات')
+                    ->hidden(fn() => !auth()->user()->can('viewAny', \Spatie\Permission\Models\Role::class))
+                    ->sort(5),
+                // يمكنك إضافة عناصر أخرى هنا بنفس الطريقة
+            ])
+            ->plugins([
+                // أضف البلجنز التي تحتاجها هنا
+                // \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
+                // بلجن التبديل بين اللغات
+                // \BezhanSalleh\FilamentLanguageSwitch\FilamentLanguageSwitchPlugin::make(),
+            ])
+            ->databaseNotifications() // **هنا تفعيل نظام الإشعارات**
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -61,61 +92,31 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                'school.tenancy',
+                // أضف Middleware إضافي إذا كان لديك، مثل tenancy مثلاً
             ])
             ->renderHook(
                 'panels::head.end',
-                fn (): string => '<script>
-                    document.addEventListener("alpine:init", () => {
-                        Alpine.store("sidebar", {
-                            isOpen: true,
-                            toggle() { this.isOpen = !this.isOpen; },
-                            close() { this.isOpen = false; },
-                            open() { this.isOpen = true; },
-                            groupIsCollapsed(group) { return false; },
-                            toggleGroup(group) { }
+                fn (): string => '
+                    <script>
+                        document.addEventListener("alpine:init", () => {
+                            Alpine.store("sidebar", {
+                                isOpen: true,
+                                toggle() { this.isOpen = !this.isOpen; },
+                                close() { this.isOpen = false; },
+                                open() { this.isOpen = true; },
+                                groupIsCollapsed(group) { return false; },
+                                toggleGroup(group) { }
+                            });
+                            Alpine.store("theme", "system");
                         });
-                        Alpine.store("theme", "system");
-                    });
-                    
-                    // Set initial direction based on locale
-                    const locale = "' . app()->getLocale() . '";
-                    document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
-                    document.documentElement.lang = locale;
-                </script>
-                <style>
-                    @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
-                    
-                    // [dir="rtl"] body,
-                    // [dir="rtl"] .fi-sidebar,
-                    // [dir="rtl"] .fi-main {
-                    //     font-family: "Tajawal", "Inter", ui-sans-serif, system-ui, sans-serif;
-                    // }
-                    
-                    // [dir="rtl"] .fi-sidebar {
-                    //     right: 0;
-                    //     left: auto;
-                    // }
-                    
-                    // [dir="rtl"] .fi-main {
-                    //     margin-right: var(--sidebar-width, 15rem);
-                    //     margin-left: 0;
-                    // }
-                    
-                    // [dir="rtl"] .fi-header {
-                    //     padding-right: var(--sidebar-width, 15rem);
-                    //     padding-left: 1rem;
-                    // }
-                    
-                    // [dir="rtl"] .fi-sidebar-nav-item-icon {
-                    //     margin-left: 0.75rem;
-                    //     margin-right: 0;
-                    // }
-                    
-                    // [dir="rtl"] .fi-sidebar-group-items {
-                    //     text-align: right;
-                    // }
-                </style>'
+
+                        const locale = "' . app()->getLocale() . '";
+                        document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+                        document.documentElement.lang = locale;
+                    </script>
+                    <style>
+                        @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+                    </style>'
             )
             ->renderHook(
                 'panels::topbar.end',
@@ -125,5 +126,6 @@ class AdminPanelProvider extends PanelProvider
                 'panels::topbar.start',
                 fn (): string => view('filament.components.user-status')->render()
             );
+        
     }
 }

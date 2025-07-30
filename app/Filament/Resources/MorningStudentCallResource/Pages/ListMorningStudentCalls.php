@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\StudentCallResource\Pages;
+namespace App\Filament\Resources\MorningStudentCallResource\Pages;
 
-use App\Filament\Resources\StudentCallResource;
+use App\Filament\Resources\MorningStudentCallResource;
 use Filament\Actions;
 use App\Models\StudentCall;
 use Filament\Resources\Pages\ListRecords;
@@ -10,9 +10,9 @@ use Carbon\Carbon;
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListStudentCalls extends ListRecords
+class ListMorningStudentCalls extends ListRecords
 {
-    protected static string $resource = StudentCallResource::class;
+    protected static string $resource = MorningStudentCallResource::class;
 
     public string $selectedDate;
 
@@ -34,7 +34,7 @@ class ListStudentCalls extends ListRecords
             ->whereDate('call_cdate', $this->selectedDate)
             ->when(auth()->user()?->school_id, fn ($query) =>
                 $query->where('school_id', auth()->user()->school_id)
-            )->where('call_period', StudentCall::PERIOD_EVENING);
+            )->where('call_period', StudentCall::PERIOD_MORNING);
     }
 
     protected function getHeaderActions(): array

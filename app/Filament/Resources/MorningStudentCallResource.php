@@ -2,15 +2,20 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\StudentCallResource\Pages;
+use App\Filament\Resources\MorningStudentCallResource\Pages;
+use App\Filament\Resources\MorningStudentCallResource\RelationManagers;
 use App\Models\StudentCall;
 use Filament\Forms;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class StudentCallResource extends Resource
+class MorningStudentCallResource extends Resource
 {
+
     protected static ?string $model = StudentCall::class;
 
     
@@ -20,10 +25,10 @@ class StudentCallResource extends Resource
     protected static ?string $navigationGroup = 'ندائات';
     
     protected static ?int $navigationSort = 0;
-    
+
     protected static ?string $navigationIcon = 'heroicon-o-phone';
-    protected static ?string $navigationLabel = 'نداءات الطلاب';
-    protected static ?string $pluralModelLabel = 'نداءات الطلاب';
+    protected static ?string $navigationLabel = 'نداءات الطلاب الصباح';
+    protected static ?string $pluralModelLabel = 'الصباح نداءات الطلاب';
 
     public static function getEloquentQuery(): Builder
     {
@@ -34,7 +39,7 @@ class StudentCallResource extends Resource
         }
 
         // عرض النداءات المسائية فقط
-        $query->where('call_period', \App\Models\StudentCall::PERIOD_EVENING);
+        $query->where('call_period', \App\Models\StudentCall::PERIOD_MORNING);
 
         return $query;
     }
@@ -160,13 +165,13 @@ class StudentCallResource extends Resource
             Tables\Actions\DeleteAction::make(),
         ]);
     }
-
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListStudentCalls::route('/'),
-            'show' => Pages\ShowStudentCall::route('/{record}'),
-            // يمكنك تفعيل create/edit إذا احتجت
+            'index' => Pages\ListMorningStudentCalls::route('/'),
+            'create' => Pages\CreateMorningStudentCall::route('/create'),
+            'edit' => Pages\EditMorningStudentCall::route('/{record}/edit'),
+            'show' => Pages\ShowMorningStudentCalls::route('/{record}'),
         ];
     }
 }
