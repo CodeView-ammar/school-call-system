@@ -22,19 +22,35 @@ use App\Http\Controllers\Api\EarlyArrivalController;
 | API Routes
 |--------------------------------------------------------------------------
 */
-
+use App\Models\Stop;
+use Illuminate\Support\Facades\Auth;
 // Authentication routes (public)
 Route::post('auth/login', [AuthController::class, 'login']);
 Route::post('auth/register', [AuthController::class, 'register']);
 
+Route::get('stops', function (Request $request) {
+    $schoolId = $request->input('school_id');
+
+    if ($schoolId) {
+        // فلترة على حسب الـ school_id المرسل
+        return Stop::where('school_id', $schoolId)->get();
+    }
+
+    // إذا لم يُرسل school_id → رجع الكل
+    return Stop::all();
+});
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/current-user', function () {
+        return response()->json(Auth::user());
+    });
+
     // Auth user routes
     Route::get('auth/user', [AuthController::class, 'user']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
 
-});
+
 
     // Schools routes
     Route::apiResource('schools', SchoolController::class);
@@ -153,7 +169,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{id}', [WeekDayController::class, 'destroy']);
     });
 
-
+    });
     Route::get('/check-version', [App\Http\Controllers\Api\VersionController::class, 'check']);
 
     // Statistics route

@@ -91,10 +91,22 @@ class UserResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(255),
+
                         Forms\Components\TextInput::make('phone')
                             ->label('رقم الهاتف')
                             ->tel()
-                            ->maxLength(255),
+                            ->required()
+                            ->rules(function ($get, $record) {
+                                return [
+                                    Rule::unique('users', 'phone')->ignore($record?->id),
+                                    'regex:/^05[0-9]{8}$/',
+                                ];
+                            })
+                            ->validationMessages([
+                                'unique' => 'رقم الهاتف مستخدم مسبقًا، يرجى إدخال رقم آخر.',
+                                'regex' => 'يجب أن يبدأ رقم الهاتف بـ 05 ويتكون من 10 أرقام.',
+                            ])
+                            ->helperText('يجب إضافة رقم هاتف يبدأ بـ 05 ويتكون من 10 أرقام (مثال: 0501234567)'),
                        Select::make('user_type')
                             ->label('نوع المستخدم')
                             ->required()

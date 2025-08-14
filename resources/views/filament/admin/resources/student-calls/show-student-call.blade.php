@@ -32,6 +32,12 @@
                 'homeward' => 'في طريق العودة',
                 'arrived_home' => 'وصل إلى المنزل',
                 'delivered' => 'تم التسليم',
+                'morning_prepare'=>'استعداد',
+                'morning_arrived'=>'تم الوصول',
+                'morning_received'=>'استلام الطالب',
+                'morning_delivered'=>'تسليم للمدرسة',
+                'morning_canceled'=>'تم الإلغاء',
+            
             ];
         @endphp
         {{ $labels[$record->status] ?? $record->status }}

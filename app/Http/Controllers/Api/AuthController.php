@@ -20,21 +20,22 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'phone' => 'required',      // تم تغيير 'email' إلى 'phone'
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        // البحث عن المستخدم باستخدام رقم الجوال
+        $user = User::where('phone', $request->phone)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['البيانات المدخلة غير صحيحة.'],
+                'phone' => ['البيانات المدخلة غير صحيحة.'],
             ]);
         }
 
         if (!$user->is_active) {
             throw ValidationException::withMessages([
-                'email' => ['الحساب غير مفعل.'],
+                'phone' => ['الحساب غير مفعل.'],
             ]);
         }
 

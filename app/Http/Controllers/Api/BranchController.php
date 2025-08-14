@@ -250,7 +250,8 @@ class BranchController extends Controller
             ->map(function ($branch) {
                 return [
                     'id' => $branch->id,
-                    'name' => $branch->name_ar ?: $branch->name_en,
+                    'name' => $branch->name_ar,
+                    "name_en" => $branch->name_en,
                     'code' => $branch->code,
                 ];
             });

@@ -76,6 +76,11 @@ class StudentCallResource extends Resource
                     'homeward' => 'في طريق العودة',
                     'arrived_home' => 'وصل إلى المنزل',
                     'delivered' => 'تم التسليم',
+                    'morning_prepare'=>'استعداد',
+                    'morning_arrived'=>'تم الوصول',
+                    'morning_received'=>'استلام الطالب',
+                    'morning_delivered'=>'تسليم للمدرسة',
+                    'morning_canceled'=>'تم الإلغاء',
                 ])
                 ->required()
                 ->native(false),
@@ -135,6 +140,11 @@ class StudentCallResource extends Resource
                             'homeward' => 'في طريق العودة',
                             'arrived_home' => 'وصل إلى المنزل',
                             'delivered' => 'تم التسليم',
+                            'morning_prepare'=>'استعداد',
+                            'morning_arrived'=>'تم الوصول',
+                            'morning_received'=>'استلام الطالب',
+                            'morning_delivered'=>'تسليم للمدرسة',
+                            'morning_canceled'=>'تم الإلغاء',
                         ];
                         return $labels[$state] ?? $state;
                     }),
