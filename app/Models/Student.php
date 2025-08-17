@@ -76,6 +76,10 @@ class Student extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+    public function stop()
+    {
+        return $this->hasMany(Stop::class);
+    }
     
     public function getAgeAttribute()
     {

@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 class Stop extends Model
 {
     protected $fillable = [
-         'school_id', 'name', 'address', 'latitude', 'longitude', 'description', 'is_active'
+        'school_id',
+        'student_id', // إضافة حقل الطالب
+        'name',
+        'address',
+        'latitude',
+        'longitude',
+        'description',
+        'is_active'
     ];
 
     // العلاقة مع المدرسة
@@ -14,9 +21,16 @@ class Stop extends Model
     {
         return $this->belongsTo(School::class);
     }
-    
+
+    // العلاقة مع الطالب
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+
+    // العلاقة مع الطرق
     public function routes()
-{
-    return $this->belongsToMany(Route::class, 'route_stop', 'stop_id', 'route_id');
-}
+    {
+        return $this->belongsToMany(Route::class, 'route_stop', 'stop_id', 'route_id');
+    }
 }

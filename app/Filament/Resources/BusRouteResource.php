@@ -17,17 +17,21 @@ class BusRouteResource extends Resource
 {
     protected static ?string $model = BusRoute::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map';
+    // protected static ?string $navigationIcon = 'heroicon-o-map';
     
-    protected static ?string $navigationLabel = 'مسارات الباصات';
+    // protected static ?string $navigationLabel = 'مسارات الباصات';
+    
+    
+    // protected static ?string $navigationGroup = 'إدارة النقل';
     
     protected static ?string $modelLabel = 'مسار باص';
     
     protected static ?string $pluralModelLabel = 'مسارات الباصات';
-    
-    protected static ?string $navigationGroup = 'إدارة النقل';
-    
     protected static ?int $navigationSort = 2;
+    
+    protected static ?string $navigationIcon = null; // إخفاء الأيقونة
+    protected static ?string $navigationLabel = null; // إخفاء الاسم
+    protected static ?string $navigationGroup = null; // إذا أردت إخفاء المجموعة
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();

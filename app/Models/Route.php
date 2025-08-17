@@ -14,8 +14,9 @@ class Route extends Model
 
     // الحقول القابلة للتعبئة (fillable)
     protected $fillable = [
-        'name',
+        'route_ar',
         'school_id',
+        'route_type',
 
     ];
 
@@ -27,5 +28,11 @@ class Route extends Model
     public function stops()
     {
         return $this->belongsToMany(Stop::class, 'route_stop', 'route_id', 'stop_id');
+    }
+
+    // العلاقة مع الرحلات
+    public function trips()
+    {
+        return $this->hasMany(Trip::class);
     }
 }
