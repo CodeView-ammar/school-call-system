@@ -10,7 +10,7 @@ class CallType extends Model
     use HasFactory;
 
     protected $table = 'call_types';
-    protected $primaryKey = 'ctype_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'ctype_name_eng',

@@ -51,7 +51,7 @@ class Student extends Model
     
     public function bus()
     {
-        return $this->belongsTo(Bus::class);
+        return $this->belongsTo(Bus::class, 'bus_id', 'id');
     }
     
     public function guardians()

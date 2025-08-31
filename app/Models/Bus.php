@@ -34,7 +34,7 @@ class Bus extends Model
 
     public function driver(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'driver_id');
+        return $this->belongsTo(Driver::class, 'driver_id');
     }
 
     public function school(): BelongsTo
@@ -52,11 +52,10 @@ class Bus extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    public function students(): HasMany
+    public function students()
     {
-        return $this->hasMany(Student::class);
+        return $this->hasMany(Student::class, 'bus_id', 'id');
     }
-
     public function busRoutes()
     {
         return $this->hasMany(BusRoute::class);

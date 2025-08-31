@@ -68,12 +68,7 @@ class GradeClassResource extends Resource
                                     ->searchable()
                                     ->preload(),
 
-                                Forms\Components\TextInput::make('grade_order')
-                                    ->label('ترتيب الصف')
-                                    ->numeric()
-                                    ->required()
-                                    ->minValue(1)
-                                    ->maxValue(12),
+
                             ]),
                             
                         Forms\Components\Grid::make(2)
@@ -122,10 +117,7 @@ class GradeClassResource extends Resource
                     ->label('الفرقة الدراسية')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('grade_order')
-                    ->label('ترتيب الصف')
-                    ->sortable()
-                    ->alignCenter(),
+
                     
                 // Tables\Columns\TextColumn::make('students_count')
                 //     ->label('عدد الطلاب')
@@ -189,8 +181,7 @@ class GradeClassResource extends Resource
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('حذف المحدد'),
                 ]),
-            ])
-            ->defaultSort('grade_order', 'asc');
+            ]);
     }
 
     public static function getRelations(): array

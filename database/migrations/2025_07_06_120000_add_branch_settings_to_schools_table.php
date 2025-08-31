@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('schools', function (Blueprint $table) {
-            $table->integer('max_branches')->default(1)->after('logo_path');
-            $table->integer('current_branches_count')->default(0)->after('max_branches');
-            $table->boolean('allow_unlimited_branches')->default(false)->after('current_branches_count');
-            $table->json('branch_settings')->nullable()->after('allow_unlimited_branches');
+            $table->integer('max_branches')->default(1);
+            $table->integer('current_branches_count')->default(0);
+            $table->boolean('allow_unlimited_branches')->default(false);
+            $table->json('branch_settings')->nullable();
         });
     }
 

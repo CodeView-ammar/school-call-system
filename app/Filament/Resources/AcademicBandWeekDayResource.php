@@ -69,7 +69,7 @@ public static function form(Form $form): Form
                     if (!$schoolId) return [];
 
                     return WeekDay::where('school_id', $schoolId)
-                        ->where('day_inactive', '!=', 1)
+                        // ->where('day_inactive', '!=', 1)
                         ->pluck('day', 'day_id');
                 })
                 ->required()

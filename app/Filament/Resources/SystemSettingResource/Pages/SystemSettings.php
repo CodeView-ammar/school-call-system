@@ -73,7 +73,7 @@ class SystemSettings extends Page implements HasForms
                                         Forms\Components\CheckboxList::make('active_call_types')
                                             ->label('أنواع الندائات المفعلة')
                                             ->options(function () {
-                                                return CallType::pluck('ctype_name_ar', 'ctype_id')->toArray();
+                                                return CallType::pluck('ctype_name_ar', 'id')->toArray();
                                             })
                                             ->columns(2)
                                             ->gridDirection('row'),
@@ -188,8 +188,8 @@ class SystemSettings extends Page implements HasForms
             // إعادة جلب البيانات بعد الإنشاء
             $weekDays = WeekDay::where('customer_code', $systemSetting->sys_cust_code ?? 'DEFAULT')->get();
         }
-        
-        $activeCallTypes = CallType::where('school_id', $schoolId)->where('ctype_isactive', true)->pluck('ctype_id')->toArray();
+
+        $activeCallTypes = CallType::where('school_id', $schoolId)->where('ctype_isactive', true)->pluck('id')->toArray();
 
         return [
             'sys_earlycall' => $systemSetting?->sys_earlycall ?? '07:00',
@@ -237,7 +237,7 @@ class SystemSettings extends Page implements HasForms
             if (isset($data['active_call_types'])) {
                 CallType::where('school_id', $schoolId)->update(['ctype_isactive' => false]);
                 CallType::where('school_id', $schoolId)
-                        ->whereIn('ctype_id', $data['active_call_types'])
+                        ->whereIn('id', $data['active_call_types'])
                         ->update(['ctype_isactive' => true]);
             }
 

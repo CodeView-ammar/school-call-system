@@ -26,9 +26,10 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
+            // ->locale(fn() => app()->getLocale())
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('/admin')
             ->login()
             ->brandName('Smart Call - نظام النداء الذكي')
             ->favicon('/favicon.ico')
@@ -126,6 +127,6 @@ class AdminPanelProvider extends PanelProvider
                 'panels::topbar.start',
                 fn (): string => view('filament.components.user-status')->render()
             );
-        
+
     }
 }

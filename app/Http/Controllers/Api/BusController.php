@@ -259,7 +259,7 @@ public function getStudentsWithBusesByGuardianAndSchool(Request $request)
                 'branch_latitude' => optional($bus->branch)->latitude,
                 'branch_longitude' => optional($bus->branch)->longitude,
                 'driver' => $bus->driver ? [
-                    'id' => optional($bus->supervisor)->name,
+                    'id' => $bus->driver->user_id,
                     'name' => $bus->driver->name,
                     'phone' => $bus->driver->phone,
                 ] : null,

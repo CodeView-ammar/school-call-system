@@ -9,13 +9,19 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateAcademicBand extends CreateRecord
 {
     protected static string $resource = AcademicBandResource::class;
-    protected function mutateFormDataBeforeCreate(array $data): array
-        {
-            // تأكد من وجود school_id
-            if (!isset($data['school_id']) && auth()->user()?->school_id) {
-                $data['school_id'] = auth()->user()->school_id;
-            }
+protected function mutateFormDataBeforeCreate(array $data): array
+{
+    if (auth()->user()->school_id) {
+        $data['school_id'] = auth()->user()->school_id;
+    }
+    return $data;
+}
 
-            return $data;
-        }
+protected function mutateFormDataBeforeSave(array $data): array
+{
+    if (auth()->user()->school_id) {
+        $data['school_id'] = auth()->user()->school_id;
+    }
+    return $data;
+}
 }

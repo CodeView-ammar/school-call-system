@@ -3,9 +3,7 @@
 namespace App\Filament\Resources\StudentResource\Pages;
 
 use App\Filament\Resources\StudentResource;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Support\Facades\Auth;
 
 class CreateStudent extends CreateRecord
 {

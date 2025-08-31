@@ -159,10 +159,10 @@ public static function form(Form $form): Form
                     ->searchable()
                     ->preload()
                     ->required(),
-                Forms\Components\DatePicker::make('enrollment_date')
-                    ->label('تاريخ التسجيل')
-                    ->default(now())
-                    ->required(),
+                // Forms\Components\DatePicker::make('enrollment_date')
+                //     ->label('تاريخ التسجيل')
+                //     ->default(now())
+                //     ->required(),
             ]),
 
         // العنوان وموقع الخريطة
@@ -216,21 +216,16 @@ public static function form(Form $form): Form
             ->schema([
                 Forms\Components\Grid::make(2)->schema([
                     Forms\Components\Select::make('bus_id')
-                    ->label('الحافلة')
-                    ->relationship('bus', 'number')
-                    ->searchable()
-                    ->reactive() // اجعل الحقل تفاعليًا
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        // إعادة تعيين bus_id عند تغيير الفرع
-                        $set('bus_id', null);
-                    })
-                    ->options(function (callable $get) {
-                        $branchId = $get('branch_id'); // الحصول على معرف الفرع
-                        if (!$branchId) return [];
+                            ->label('الحافلة')
+                            ->searchable()
+                            ->reactive()
+                            ->options(function (callable $get) {
+                                $branchId = $get('branch_id');
+                                if (!$branchId) return [];
+                                return \App\Models\Bus::where('branch_id', $branchId)
+                                    ->pluck('number', 'id'); // ✅ هنا المفتاح id والقيمة number
+                            }),
 
-                        // جلب الحافلات المرتبطة بالفرع
-                        return \App\Models\Bus::where('branch_id', $branchId)->pluck('number', 'id');
-                    }),
                     Forms\Components\TextInput::make('pickup_location')
                         ->label('نقطة الاستلام')
                         ->maxLength(255),

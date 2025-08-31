@@ -34,6 +34,7 @@ class User extends Authenticatable
         'user_type',
         'can_manage_school',
         'school_permissions',
+        "fcm_token"
     ];
 
     /**

@@ -8,16 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('grade_classes', function (Blueprint $table) {
-            $table->foreignId('academic_band_id')->nullable()->change();
+        Schema::table('users', function (Blueprint $table) {
+            $table->text('fcm_token')->nullable()->after('remember_token');
         });
     }
 
     public function down(): void
     {
-        Schema::table('grade_classes', function (Blueprint $table) {
-            $table->foreignId('academic_band_id')->nullable()->change();
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('fcm_token');
         });
     }
 };
-

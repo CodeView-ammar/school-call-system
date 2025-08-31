@@ -3,49 +3,47 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
-class RecreateStudentCallsTable extends Migration
+return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
-        // إعادة تسمية الجدول القديم مؤقتًا
-        Schema::rename('student_calls', 'old_student_calls');
+        // إزالة الـ foreign key من جدول log مؤقتًا
+        Schema::table('student_calls_log', function (Blueprint $table) {
+            $table->dropForeign(['student_call_id']);
+        });
 
-        // إنشاء جدول جديد student_calls مع عمود id كـ primary key
+        // حذف الجدول القديم student_calls
+        Schema::dropIfExists('student_calls');
+
+        // إنشاء الجدول الجديد student_calls
         Schema::create('student_calls', function (Blueprint $table) {
-            $table->id(); // هذا هو id autoincrement
-            $table->unsignedBigInteger('student_id');
-            $table->unsignedBigInteger('school_id');
+            $table->id(); // primary key auto increment
+            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
+            $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('branch_id')->constrained('branches')->onDelete('cascade');
             $table->dateTime('call_cdate')->nullable();
             $table->dateTime('call_edate')->nullable();
-            $table->unsignedBigInteger('user_id');
-            $table->string('status');
-            $table->unsignedBigInteger('branch_id');
+            $table->string('status')->default('0');
             $table->string('caller_type')->default('guardian');
             $table->string('call_level')->default('normal');
             $table->timestamps();
-
-            // علاقات
-            $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
-            $table->foreign('school_id')->references('id')->on('schools')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('branch_id')->references('id')->on('branches')->onDelete('cascade');
         });
 
-        // نقل البيانات من الجدول القديم للجديد
-        DB::table('student_calls')->insertUsing([
-            'call_id as id', 'student_id', 'school_id', 'call_cdate', 'call_edate',
-            'user_id', 'status', 'branch_id', 'created_at', 'updated_at',
-            'caller_type', 'call_level'
-        ], DB::table('old_student_calls'));
-
-        // حذف الجدول القديم
-        Schema::drop('old_student_calls');
+        // إعادة إضافة الـ foreign key لجدول log
+        Schema::table('student_calls_log', function (Blueprint $table) {
+            $table->foreign('student_call_id')->references('id')->on('student_calls')->onDelete('cascade');
+        });
     }
 
-    public function down()
+    public function down(): void
     {
+        // حذف foreign key من log قبل حذف الجدول
+        Schema::table('student_calls_log', function (Blueprint $table) {
+            $table->dropForeign(['student_call_id']);
+        });
+
         Schema::dropIfExists('student_calls');
     }
-}
+};

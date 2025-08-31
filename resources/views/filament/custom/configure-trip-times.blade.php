@@ -1,8 +1,9 @@
 <x-filament-panels::page>
-    <!-- Custom CSS for Trips -->
-    <link rel="stylesheet" href="{{ asset('css/trips-custom.css') }}">
-    
     <div class="space-y-6">
+        <!-- Custom CSS for Trips -->
+        <style>
+            @import url('{{ asset('css/trips-custom.css') }}');
+        </style>
         <!-- Trip Information Header -->
         <div class="bg-white dark:bg-gray-900 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10 rounded-lg p-6">
             <div class="flex items-start justify-between">
@@ -29,7 +30,7 @@
             <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400">المسار</div>
-                    <div class="mt-1 text-sm text-gray-900 dark:text-white">{{ $record->route->name }}</div>
+                    <div class="mt-1 text-sm text-gray-900 dark:text-white">{{ $record->route->route_ar }}</div>
                 </div>
                 
                 <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
@@ -159,11 +160,10 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Google Maps Integration -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA903FiEEzDSEmogbe9-PkmA_v520gnrQ4&libraries=geometry" async defer></script>
-    <script>
+        
+        <!-- Google Maps Integration -->
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA903FiEEzDSEmogbe9-PkmA_v520gnrQ4&libraries=geometry" async defer></script>
+        <script>
         let tripMap;
         let tripMarkers = [];
         let routePath;
@@ -328,8 +328,9 @@
             }
         `;
         document.head.appendChild(style);
-    </script>
-
-    <!-- Livewire Scripts -->
-    @livewireScripts
+        </script>
+        
+        <!-- Scripts moved inside main div -->
+        @livewireScripts
+    </div>
 </x-filament-panels::page>

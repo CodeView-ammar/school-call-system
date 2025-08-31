@@ -8,6 +8,7 @@ use App\Models\Route;
 use App\Models\Driver;
 use App\Models\Bus;
 use App\Models\School;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -18,6 +19,8 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Card;
 use Filament\Forms\Components\Group;
+use Filament\Notifications\Notification;
+use Carbon\Carbon;
 
 class TripResource extends Resource
 {
@@ -25,14 +28,33 @@ class TripResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $navigationLabel = 'الرحلات';
+    protected static ?string $navigationLabel = null;
 
-    protected static ?string $modelLabel = 'رحلة';
+    protected static ?string $modelLabel = null;
 
-    protected static ?string $pluralModelLabel = 'الرحلات';
+    protected static ?string $pluralModelLabel = null;
   
-    protected static ?string $navigationGroup = 'إدارة النقل';
-    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = null;
+    
+    public static function getNavigationLabel(): string
+    {
+        return __('filament.resources.trip.navigation_label');
+    }
+    
+    public static function getModelLabel(): string
+    {
+        return __('filament.resources.trip.label');
+    }
+    
+    public static function getPluralModelLabel(): string
+    {
+        return __('filament.resources.trip.plural_label');
+    }
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('filament.navigation.transport_management');
+    }
 
     public static function form(Form $form): Form
     {
@@ -44,26 +66,65 @@ class TripResource extends Resource
                         ->schema([
                             Grid::make(1)
                                 ->schema([
-                                    Forms\Components\Select::make('route_id')
+                                Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                                    ->default(auth()->user()?->school_id)
+                                    ->hidden(fn () => auth()->user()?->school_id !== null)
+                                    ->required()
+                                    ->reactive(),
+                                Forms\Components\Select::make('branch_id')
+                                    ->label('الفرع')
+                                    ->options(fn () => \App\Models\Branch::pluck('name_ar', 'id'))
+                                    ->default(auth()->user()?->branch_id)
+                                    ->required()
+                                    ->reactive(),
+                                Forms\Components\Select::make('route_id')
                                         ->label('المسار')
-                                        ->options(Route::with('school')->get()->pluck('route_ar', 'id'))
+                                        ->options(
+                                            Route::with('school')->get()->pluck(
+                                                // نص العرض يكون "اسم المسار - نوع الرحلة"
+                                                fn($route) => $route->route_ar . ' - ' . $route->route_type,
+                                                'id'
+                                            )
+                                        )
                                         ->required()
                                         ->searchable()
                                         ->placeholder('اختر المسار')
                                         ->reactive()
-                                        ->afterStateUpdated(fn ($state, callable $set) => 
-                                            $set('school_id', Route::find($state)?->school_id)
-                                        ),
+                                        ->afterStateUpdated(function ($state, callable $set) {
+                                            $route = Route::find($state);
+                                            if ($route) {
+                                                $set('school_id', $route->school_id);
+                                            }
+                                            // Reset bus and driver when route changes
+                                            $set('bus_id', null);
+                                            $set('driver_id', null);
+                                        }),
+
                                 ])
                                 ->columnSpan(1),
                             
                             Grid::make(2)
                                 ->schema([
+                                    Forms\Components\Select::make('trip_type')
+                                        ->label('نوع الرحلة')
+                                        ->options([
+                                            'morning' => 'رحلة صباحية',
+                                            'evening' => 'رحلة مسائية'
+                                        ])
+                                        ->default('morning')
+                                        ->required()
+                                        ->reactive(),
                                     Forms\Components\DatePicker::make('effective_date')
                                         ->label('تاريخ البدء')
                                         ->required()
                                         ->default(now())
-                                        ->displayFormat('Y-m-d'),
+                                        ->displayFormat('Y-m-d')
+                                        ->reactive()
+                                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                            static::checkForConflicts($get, $set);
+                                        }),
                                     
                                     Forms\Components\Select::make('repeated_every_days')
                                         ->label('التكرار كل (أيام)')
@@ -84,7 +145,11 @@ class TripResource extends Resource
                                         ->label('وقت الوصول للمحطة الأولى')
                                         ->required()
                                         ->seconds(false)
-                                        ->displayFormat('H:i'),
+                                        ->displayFormat('H:i')
+                                        ->reactive()
+                                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                            static::checkForConflicts($get, $set);
+                                        }),
                                     
                                     Forms\Components\TextInput::make('stop_to_stop_time_minutes')
                                         ->label('الوقت بين المحطات (دقائق)')
@@ -98,22 +163,85 @@ class TripResource extends Resource
 
                             Grid::make(2)
                                 ->schema([
-                                    Forms\Components\Select::make('driver_id')
-                                        ->label('السائق')
-                                        ->options(Driver::pluck('name', 'id'))
-                                        ->searchable()
-                                        ->placeholder('اختر السائق')
-                                        ->nullable(),
-                                    
+                                    // الباص
                                     Forms\Components\Select::make('bus_id')
                                         ->label('الباص')
-                                        ->options(Bus::pluck('number', 'id'))
+                                        ->options(function (callable $get) {
+                                            $schoolId = $get('school_id');
+                                            if (!$schoolId) {
+                                                return Bus::whereNotNull('id')->pluck('number', 'id');
+                                            }
+                                            // Filter buses by school if needed
+                                            return Bus::whereNotNull('id')->pluck('number', 'id');
+                                        })
                                         ->searchable()
+                                        ->required()
                                         ->placeholder('اختر الباص')
-                                        ->nullable(),
-                                ]),
+                                        ->reactive()
+                                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                            if (!$state) {
+                                                $set('driver_id', null);
+                                                return;
+                                            }
+                                            // dd($state);
+                                            $bus = Bus::with('driver')->find($state);
+                                            if ($bus && $bus->driver) {
+                                                $set('driver_id', $bus->driver->id);
+                                            } else {
+                                                $set('driver_id', null);
+                                            }
+                                            
+                                            static::checkForConflicts($get, $set);
+                                        })
+                                        ->rules([
+                                            fn (): \Closure => function (string $attribute, $value, \Closure $fail) {
+                                                if ($value && !Bus::find($value)) {
+                                                    $fail('الباص المحدد غير موجود.');
+                                                }
+                                            },
+                                        ]),
 
-                            Forms\Components\Hidden::make('school_id'),
+                                   Forms\Components\Select::make('driver_id')
+                                    ->label('السائق')
+                                    ->options(function (callable $get) {
+                                        $busId = $get('bus_id');
+                                        if (!$busId) {
+                                            return Driver::pluck('name', 'id');
+                                        }
+
+                                        $bus = Bus::with('driver')->find($busId);
+                                        if ($bus && $bus->driver) {
+                                            return [$bus->driver->id => $bus->driver->name];
+                                        }
+
+                                        return Driver::pluck('name', 'id');
+                                    })
+                                    ->searchable()
+                                    ->required()
+                                    ->placeholder('اختر السائق')
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        // تحقق من وجود السائق
+                                        $driver = Driver::find($state);
+                                        if (!$driver) {
+                                            $set('driver_id', null); // إعادة تعيين السائق إذا لم يكن موجودًا
+                                        }
+
+                                        static::checkForConflicts($get, $set);
+                                    })
+                                    ->rules([
+                                        fn (): \Closure => function (string $attribute, $value, \Closure $fail) {
+                                            if ($value) {
+                                                $driver = Driver::find($value);
+                                                if (!$driver) {
+                                                    $fail('السائق المحدد غير موجود.');
+                                                }
+                                            }
+                                        },
+                                    ]),
+                                    ]),
+
+                            // Forms\Components\Hidden::make('school_id'),
 
                             Forms\Components\Toggle::make('is_active')
                                 ->label('نشط')
@@ -144,15 +272,103 @@ class TripResource extends Resource
             ->columns(3);
     }
 
+    protected static function checkForConflicts($get, $set)
+    {
+        $driverId = $get('driver_id');
+        $busId = $get('bus_id');
+        $effectiveDate = $get('effective_date');
+        $arrivalTime = $get('arrival_time_at_first_stop');
+        
+        if (!$driverId && !$busId) {
+            return;
+        }
+
+        $conflicts = [];
+
+        if ($driverId && $effectiveDate && $arrivalTime) {
+            // Validate driver exists first
+            if (!Driver::find($driverId)) {
+                Notification::make()
+                    ->title('خطأ!')
+                    ->body('السائق المحدد غير موجود في قاعدة البيانات')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            $driverConflicts = Trip::where('driver_id', $driverId)
+                ->where('effective_date', $effectiveDate)
+                ->where('arrival_time_at_first_stop', $arrivalTime)
+                ->where('is_active', true)
+                ->with(['route', 'bus'])
+                ->get();
+
+            if ($driverConflicts->isNotEmpty()) {
+                $conflicts['driver'] = $driverConflicts;
+            }
+        }
+
+        if ($busId && $effectiveDate && $arrivalTime) {
+            // Validate bus exists first
+            if (!Bus::find($busId)) {
+                Notification::make()
+                    ->title('خطأ!')
+                    ->body('الباص المحدد غير موجود في قاعدة البيانات')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            $busConflicts = Trip::where('bus_id', $busId)
+                ->where('effective_date', $effectiveDate)
+                ->where('arrival_time_at_first_stop', $arrivalTime)
+                ->where('is_active', true)
+                ->with(['route', 'driver'])
+                ->get();
+
+            if ($busConflicts->isNotEmpty()) {
+                $conflicts['bus'] = $busConflicts;
+            }
+        }
+
+        if (!empty($conflicts)) {
+            $conflictMessages = [];
+            
+            if (isset($conflicts['driver'])) {
+                foreach ($conflicts['driver'] as $conflict) {
+                    $driverName = $conflict->driver->name ?? 'غير محدد';
+                    $conflictMessages[] = "تعارض في السائق: {$driverName} - الرحلة: {$conflict->route->route_ar} - الباص: " . ($conflict->bus->number ?? 'غير محدد');
+                }
+            }
+
+            if (isset($conflicts['bus'])) {
+                foreach ($conflicts['bus'] as $conflict) {
+                    $driverName = $conflict->driver->name ?? 'غير محدد';
+                    $conflictMessages[] = "تعارض في الباص: {$conflict->bus->number} - الرحلة: {$conflict->route->route_ar} - السائق: {$driverName}";
+                }
+            }
+
+            Notification::make()
+                ->title('تعارض في الأوقات!')
+                ->body(implode("\n", $conflictMessages))
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
     public static function table(Table $table): Table
     {
         return $table
+            ->recordClasses(fn (Trip $record) => static::hasConflicts($record) ? 'bg-red-50 border-l-4 border-red-500' : null)
             ->columns([
-                Tables\Columns\TextColumn::make('route.route_ar')
-                    ->label('المسار')
-                    ->sortable()
-                    ->searchable(),
-
+                Tables\Columns\TextColumn::make('route_info')
+                ->label('المسار / نوع الرحلة')
+                ->sortable()
+                ->searchable()
+                ->getStateUsing(function ($record) {
+                    return $record->route->route_ar . ' - ' . $record->route->route_type;
+                }),
                 Tables\Columns\TextColumn::make('effective_date')
                     ->label('تاريخ البدء')
                     ->date('Y-m-d')
@@ -191,6 +407,16 @@ class TripResource extends Resource
                     ->boolean()
                     ->sortable(),
 
+                Tables\Columns\IconColumn::make('has_conflicts')
+                    ->label('تعارض')
+                    ->boolean()
+                    ->getStateUsing(fn (Trip $record) => static::hasConflicts($record))
+                    ->trueIcon('heroicon-o-exclamation-triangle')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('success')
+                    ->tooltip(fn (Trip $record) => static::hasConflicts($record) ? 'يوجد تعارض في الأوقات' : 'لا يوجد تعارض'),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime('Y-m-d H:i')
@@ -216,13 +442,43 @@ class TripResource extends Resource
                     ->label('تكوين الأوقات')
                     ->icon('heroicon-o-clock')
                     ->color('warning')
-                    ->url(fn (Trip $record): string => route('filament.admin.resources.trips.configure-times', $record)),
+                    ->url(fn (Trip $record): string => TripResource::getUrl('configure-times', ['record' => $record])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    protected static function hasConflicts(Trip $record): bool
+    {
+        if (!$record->is_active) {
+            return false;
+        }
+
+        $driverConflicts = false;
+        $busConflicts = false;
+
+        if ($record->driver_id) {
+            $driverConflicts = Trip::where('driver_id', $record->driver_id)
+                ->where('effective_date', $record->effective_date)
+                ->where('arrival_time_at_first_stop', $record->arrival_time_at_first_stop)
+                ->where('is_active', true)
+                ->where('id', '!=', $record->id)
+                ->exists();
+        }
+
+        if ($record->bus_id) {
+            $busConflicts = Trip::where('bus_id', $record->bus_id)
+                ->where('effective_date', $record->effective_date)
+                ->where('arrival_time_at_first_stop', $record->arrival_time_at_first_stop)
+                ->where('is_active', true)
+                ->where('id', '!=', $record->id)
+                ->exists();
+        }
+
+        return $driverConflicts || $busConflicts;
     }
 
     public static function getRelations(): array
@@ -238,7 +494,7 @@ class TripResource extends Resource
             'index' => Pages\ListTrips::route('/'),
             'create' => Pages\CreateTrip::route('/create'),
             'edit' => Pages\EditTrip::route('/{record}/edit'),
-            'configure-times' => Pages\ConfigureTripTimes::route('/{record}/configure-times'),
+            'configure-times' => Pages\ConfigureTripTimesNew::route('/{record}/configure-times'),
         ];
     }
 }

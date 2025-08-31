@@ -18,6 +18,8 @@ class Trip extends Model
         'driver_id',
         'bus_id',
         'school_id',
+        'branch_id', // إضافة حقل الفرع
+        'trip_type', // إضافة حقل نوع الرحلة
         'is_active'
     ];
 
@@ -34,7 +36,6 @@ class Trip extends Model
     {
         return $this->belongsTo(Route::class);
     }
-
     // العلاقة مع السائق
     public function driver()
     {
@@ -46,7 +47,13 @@ class Trip extends Model
     {
         return $this->belongsTo(Bus::class);
     }
-
+    
+    // العلاقة مع الفرع
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);  // إضافة العلاقة مع الفرع
+    }
+    
     // العلاقة مع المدرسة
     public function school()
     {

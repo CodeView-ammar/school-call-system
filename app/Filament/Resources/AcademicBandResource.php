@@ -42,17 +42,19 @@ class AcademicBandResource extends Resource
         return $form
             ->schema([
 
-                 Forms\Components\Select::make('school_id')
-                    ->label('المدرسة')
-                    ->options(School::pluck('name_ar', 'id'))
-                    ->default(auth()->user()?->school_id)
-                    ->disabled(fn () => auth()->user()?->school_id !== null)
-                    ->hidden(fn () => auth()->user()?->school_id !== null)
-                    ->required()
-                    ->reactive(), 
-                    
+                 auth()->user()?->school_id === null
+                    ? Forms\Components\Select::make('school_id')
+                        ->label('المدرسة')
+                        ->relationship('school', 'name_ar')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                    : Forms\Components\Hidden::make('school_id')
+                        ->default(auth()->user()->school_id)   // القيمة من المستخدم
+                        ->dehydrated(true)                     // يرسل مع البيانات
+                        ->required(),
                     Forms\Components\Select::make('gate_id')
-                    ->label('البوابة')
+                    ->label('البوابة الدخول')
                     ->options(function (callable $get) {
                         $schoolId = $get('school_id');
                         return $schoolId
@@ -64,8 +66,15 @@ class AcademicBandResource extends Resource
                     ->disabled(fn (callable $get) => $get('school_id') === null),
                     Forms\Components\Select::make('education_level_id')
                         ->label('المرحلة الدراسية')
-                        ->relationship('educationLevel', 'name_ar')
-                        ->required(),
+                        ->options(function (callable $get) {
+                            $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                            return $schoolId
+                                ? EducationLevel::where('school_id', $schoolId)->pluck('name_ar', 'id')
+                                : [];
+                        })
+                        ->searchable()
+                        ->required()
+                        ->disabled(fn (callable $get) => $get('school_id') === null),
                 Forms\Components\TextInput::make('name_ar')
                     ->label('الاسم العربي')
                     ->required()

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\StudentCallLogController;
 use App\Http\Controllers\Api\WeekDayController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\EarlyArrivalController;
+use App\Http\Controllers\Api\TripController;
 
 
 
@@ -39,16 +40,24 @@ Route::get('stops', function (Request $request) {
     // إذا لم يُرسل school_id → رجع الكل
     return Stop::all();
 });
+Route::get('trips/{tripId}/students', [TripController::class, 'getStudentsByTrip']);
+
+
+Route::get('students/{studentId}/trip', [TripController::class, 'getTripByStudent']);
+Route::get('/guardian/students-with-buses', [BusController::class, 'getStudentsWithBusesByGuardianAndSchool']);
+
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/current-user', function () {
         return response()->json(Auth::user());
     });
-
+    
+    
     // Auth user routes
     Route::get('auth/user', [AuthController::class, 'user']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
+    Route::post('/update-fcm-token', [UserController::class, 'updateFcmToken']);
 
 
 
@@ -61,6 +70,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     // 'early-arrivals'
     Route::apiResource('early-arrivals', EarlyArrivalController::class);
+    
+    // Trips routes
+    Route::get('trips', [TripController::class, 'index']);
+    Route::get('trips/{tripId}/details', [TripController::class, 'getTripDetails']);
+    Route::get('drivers/{driverId}/trips', [TripController::class, 'getTripsByDriver']);
+    Route::get('trips/statistics', [TripController::class, 'statistics']);
+    Route::get('trips/search', [TripController::class, 'search']);
     
     
     // Branches routes
@@ -78,9 +94,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //bus
     Route::get('/guardian/buses', [BusController::class, 'getBusesByGuardianAndSchool']);
-    Route::get('/guardian/students-with-buses', [BusController::class, 'getStudentsWithBusesByGuardianAndSchool']);
     Route::get('/buses/driver-branches', [BusController::class, 'getDriverBranches']);
     Route::get('/students/by-driver-branch', [BusController::class, 'getStudentsByDriverAndBranch']);
+
+
+
 
     Route::post('/attendance', [AttendanceController::class, 'store']);
     Route::get('/attendance/{studentId}', [AttendanceController::class, 'show']);

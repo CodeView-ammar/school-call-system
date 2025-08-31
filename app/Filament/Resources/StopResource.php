@@ -61,13 +61,13 @@ public static function form(Form $form): Form
                                 ->searchable()
                                 ->required()
                                 ->reactive()
-                                ->rules([
-                                    Rule::unique('stops', 'student_id')
-                                        ->where(function ($query) {
-                                            return $query->where('school_id', auth()->user()->school_id);
-                                        })
-                                        ->ignore(fn() => $this->getRecord()?->id) // استخدام دالة للحصول على السجل الحالي
-                                ])
+                                // ->rules([
+                                //     Rule::unique('stops', 'student_id')
+                                //         ->where(function ($query) {
+                                //             return $query->where('school_id', auth()->user()->school_id);
+                                //         })
+                                //         ->ignore(fn() => $this->getRecord()?->id) // استخدام دالة للحصول على السجل الحالي
+                                // ])
                                 ->options(function (callable $get) {
                                     $schoolId = $get('school_id');
                                     return Student::where('school_id', $schoolId)->pluck('name_ar', 'id');

@@ -45,6 +45,7 @@ class AuthController extends Controller
         // إنشاء Token
         $token = $user->createToken('api-token')->plainTextToken;
 
+        
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح',
             'user' => [

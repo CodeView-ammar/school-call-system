@@ -19,7 +19,7 @@ class TripStop extends Model
     ];
 
     protected $casts = [
-        'arrival_time' => 'time',
+        'arrival_time' => 'string',
         'stop_order' => 'integer',
         'is_pickup' => 'boolean',
         'is_dropoff' => 'boolean',
@@ -41,5 +41,11 @@ class TripStop extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('stop_order');
+    }
+
+    // العلاقة مع الطلاب
+    public function students()
+    {
+        return $this->hasMany(Student::class); // تأكد من أن لديك العلاقة الصحيحة هنا
     }
 }

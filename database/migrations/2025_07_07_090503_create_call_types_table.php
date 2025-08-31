@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('call_types', function (Blueprint $table) {
-            $table->id('ctype_id');
+            $table->id('id');
             $table->string('ctype_name_eng')->nullable()->comment('اسم نوع النداء بالإنجليزية');
             $table->string('ctype_name_ar')->comment('اسم نوع النداء بالعربية');
             $table->string('ctype_cdate')->nullable()->comment('تاريخ الإنشاء');

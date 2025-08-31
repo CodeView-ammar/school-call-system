@@ -11,7 +11,7 @@ return new class extends Migration {
 
             // العلاقة مع student_calls
             $table->foreignId('student_call_id')
-                ->constrained('student_calls')
+                ->constrained('student_calls', 'call_id')
                 ->onDelete('cascade');
 
             // الحالة الجديدة

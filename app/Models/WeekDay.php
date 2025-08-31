@@ -19,9 +19,9 @@ class WeekDay extends Model
         'time_to',
         'time_from',
         'day_inactive',
-        'branch_code',
-        'customer_code',
-        'band_id',
+        // 'branch_code',
+        // 'customer_code',
+        // 'band_id',
     ];
 
     protected $casts = [

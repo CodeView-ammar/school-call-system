@@ -5,28 +5,28 @@ namespace App\Filament\Resources\TripResource\Pages;
 use App\Filament\Resources\TripResource;
 use App\Models\Trip;
 use App\Models\TripStop;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Pages\Page;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Resources\Pages\ViewRecord;
 use Carbon\Carbon;
 
-class ConfigureTripTimes extends Page implements HasForms
+class ConfigureTripTimesNew extends ViewRecord
 {
-    use InteractsWithForms;
-    
     protected static string $resource = TripResource::class;
-    protected static string $view = 'filament.custom.configure-trip-times';
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
-    public Trip $record;
+    protected static string $view = 'filament.custom.configure-trip-times-simple';
+    
     public $tripStops = [];
     
-    public function mount(Trip $record): void
+    public function mount(int | string $record): void
     {
-        $this->record = $record->load(['route.stops', 'tripStops.stop']);
+        parent::mount($record);
         $this->loadTripStops();
+    }
+
+    protected function getViewData(): array
+    {
+        return [
+            'record' => $this->record,
+            'tripStops' => $this->tripStops,
+        ];
     }
 
     public function loadTripStops()

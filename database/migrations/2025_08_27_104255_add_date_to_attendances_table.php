@@ -1,5 +1,6 @@
 <?php
 
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -8,16 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('grade_classes', function (Blueprint $table) {
-            $table->foreignId('academic_band_id')->nullable()->change();
+        Schema::table('attendances', function (Blueprint $table) {
+            $table->date('date')->after('id'); // أضف العمود بعد الـid
         });
     }
 
     public function down(): void
     {
-        Schema::table('grade_classes', function (Blueprint $table) {
-            $table->foreignId('academic_band_id')->nullable()->change();
+        Schema::table('attendances', function (Blueprint $table) {
+            $table->dropColumn('date');
         });
     }
 };
-

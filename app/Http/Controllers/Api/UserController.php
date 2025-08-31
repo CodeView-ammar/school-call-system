@@ -322,7 +322,47 @@ class UserController extends Controller
             'data' => $user
         ]);
     }
+    /**
+     * تحديث FCM Token للمستخدم
+    */
+    public function updateFcmToken(Request $request)
+    {
+        $user = $request->user(); // المستخدم الحالي
 
+        $validator = Validator::make($request->all(), [
+            'fcm_token' => 'required|string|max:512', // تأكد من طول الـ token
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'خطأ في البيانات المدخلة',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $newToken = $request->fcm_token;
+
+        // إذا كان المستخدم لديه FCM token
+        if ($user->fcm_token) {
+            // إذا كان مطابقًا للتوكن الحالي، تجاهل
+            if ($user->fcm_token === $newToken) {
+                return response()->json([
+                    'message' => 'FCM Token لم يتغير',
+                    'fcm_token' => $user->fcm_token
+                ], 200);
+            }
+        }
+
+        // تحديث التوكن إذا كان مختلفًا أو غير موجود
+        $user->fcm_token = $newToken;
+        $user->save();
+
+        return response()->json([
+            'message' => 'تم تحديث FCM Token بنجاح',
+            'fcm_token' => $user->fcm_token
+        ], 200);
+    }
+    
     /**
      * إحصائيات المستخدمين
      */

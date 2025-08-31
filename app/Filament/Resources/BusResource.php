@@ -75,22 +75,20 @@ class BusResource extends Resource
                                     ->required()
                                     ->searchable()
                                     ->preload(),
-
-                                Forms\Components\Select::make('driver_id')
-                                    ->label('السائق')
-                                    ->options(function (callable $get) {
-                                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                                        if (!$schoolId) {
-                                            return [];
-                                        }
-                                        return \App\Models\User::where('user_type', 'driver')
-                                            ->where('school_id', $schoolId)
-                                            ->pluck('name', 'id');
-                                    })
-                                    ->searchable()
-                                    ->required(false)
-                                    ->reactive()  // تجعلها تتفاعل مع تغيرات النموذج
-                                    ->helperText('ملاحظة: عند إضافة مستخدم كسائق، تأكد من منحه صلاحيات السائق في النظام.'),
+                             Forms\Components\Select::make('driver_id')
+                                ->label('السائق')
+                                ->options(function (callable $get) {
+                                    $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
+                                    return \App\Models\Driver::where('school_id', $schoolId)
+                                        ->pluck('name', 'id'); // استخدم اسماً كاملاً للسائق
+                                })
+                                ->searchable()
+                                ->required()
+                                ->reactive()
+                                ->helperText('ملاحظة: تأكد من أن السائق لديه الصلاحيات المناسبة.'),
 
                         Forms\Components\Select::make('supervisor_id')
                             ->label('المشرف')
@@ -220,7 +218,10 @@ class BusResource extends Resource
                     ->label('الفرع')
                     ->searchable()
                     ->sortable(),
-                    
+                Tables\Columns\TextColumn::make('driver.name_ar')
+                    ->label('السائق')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('capacity')
                     ->label('السعة')
                     ->alignCenter()
