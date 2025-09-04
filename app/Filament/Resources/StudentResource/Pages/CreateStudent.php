@@ -9,6 +9,9 @@ class CreateStudent extends CreateRecord
 {
     protected static string $resource = StudentResource::class;
 
+    public $latitude;
+    public $longitude;
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // التأكد من وجود school_id
