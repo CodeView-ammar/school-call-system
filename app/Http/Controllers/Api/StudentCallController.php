@@ -100,7 +100,7 @@ class StudentCallController extends Controller
                     'success' => true,
                     'message' => 'تم العثور على نداء موجود لهذا الطالب اليوم',
                     'data' => [
-                        'call_id' => $existingCall->call_id,
+                        'id' => $existingCall->id,
                         'status' => $existingCall->status,
                         'existing' => true
                         ]
@@ -111,7 +111,7 @@ class StudentCallController extends Controller
 
             // حفظ سجل الحالة في جدول student_calls_log
             StudentCallLog::create([
-                'student_call_id' => $studentCall->call_id,
+                'student_call_id' => $studentCall->id,
                 'status' => $validatedData['status'],
                 'changed_at' => now(),
                 'changed_by_user_id' => $validatedData['user_id'],
@@ -220,7 +220,7 @@ class StudentCallController extends Controller
             $call->save();
 
             // تحديد المستخدم الذي غيّر الحالة
-            $changedByUserId = $validatedData['user_id'] ?? auth()->id();
+            $changedByUserId = $validatedData['user_id'];
 
             // حفظ السجل في جدول logs
             StudentCallLog::create([
@@ -236,7 +236,7 @@ class StudentCallController extends Controller
                 'success' => true,
                 'message' => 'تم تحديث الحالة بنجاح',
                 'data' => [
-                    'call_id' => $call->call_id,
+                    'call_id' => $call->id,
                     'status' => $call->status,
                     'updated_at' => $call->updated_at,
                 ]

@@ -33,8 +33,8 @@ class StatsOverviewWidget extends BaseWidget
                     ->description('جميع الحافلات المسجلة')
                     ->descriptionIcon('heroicon-m-truck')
                     ->color('warning'),
-                    
-                Stat::make('الحضور اليوم', Attendance::whereDate('date', today())->where('status', 'present')->count())
+
+                Stat::make('الحضور اليوم', Attendance::whereDate('attendance_date', today())->where('status', 'present')->count())
                     ->description('حضور الطلاب اليوم')
                     ->descriptionIcon('heroicon-m-check-circle')
                     ->color('info'),
@@ -59,7 +59,7 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-truck')
                 ->color('warning'),
                 
-            Stat::make('الحضور اليوم', Attendance::whereDate('date', today())
+            Stat::make('الحضور اليوم', Attendance::whereDate('attendance_date', today())
                 ->where('status', 'present')
                 ->whereIn('student_id', function($query) use ($schoolIds) {
                     $query->select('id')->from('students')

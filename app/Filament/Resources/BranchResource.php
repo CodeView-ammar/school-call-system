@@ -41,6 +41,7 @@ class BranchResource extends Resource
 
     private static function validateBranchLimit(?int $schoolId, \Closure $fail): void
     {
+        
         if (!$schoolId) {
             $fail('يجب اختيار المدرسة.');
              Notification::make()
@@ -86,13 +87,15 @@ class BranchResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->rules([
+                           ->rules([
                                 function () {
                                     return function (string $attribute, $value, \Closure $fail) {
-                                        \App\Filament\Resources\BranchResource::validateBranchLimit($value, $fail);
+                                        if (request()->routeIs('filament.resources.branches.create')) {
+                                            \App\Filament\Resources\BranchResource::validateBranchLimit($value, $fail);
+                                        }
                                     };
                                 },
-                            ])
+        ])
                             ->helperText(function (callable $get) {
                                 $schoolId = $get('school_id');
                                 if (!$schoolId) return null;
@@ -111,9 +114,9 @@ class BranchResource extends Resource
                             ->rules([
                                 function () {
                                     return function (string $attribute, $value, \Closure $fail) {
-                                        
+                                        if (request()->routeIs('filament.resources.branches.create')) {
                                         \App\Filament\Resources\BranchResource::validateBranchLimit($value, $fail);
-                                    
+                                        }
                                     };
                                 },
                             ])

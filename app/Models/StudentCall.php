@@ -9,7 +9,7 @@ class StudentCall extends Model
     use HasFactory;
 
     protected $table = 'student_calls';
-    protected $primaryKey = 'call_id';
+    protected $primaryKey = 'id';
     public $incrementing = true; // إذا كان auto-increment
     protected $keyType = 'int';  // نوع المفتاح
     protected $fillable = [

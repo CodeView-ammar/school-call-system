@@ -177,7 +177,7 @@ class User extends Authenticatable
     
     public function getAuthIdentifierName()
     {
-        return 'phone';
+        return 'id';
     }
 
     public function getAccessibleSchools()

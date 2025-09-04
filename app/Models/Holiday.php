@@ -53,4 +53,6 @@ class Holiday extends Model
                $this->from_date <= $today && 
                $this->to_date >= $today;
     }
+
+    
 }

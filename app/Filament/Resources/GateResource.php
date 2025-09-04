@@ -19,7 +19,10 @@ class GateResource extends Resource
     protected static ?string $navigationLabel = 'البوابات';
     protected static ?string $modelLabel = 'البوابات';
     protected static ?string $pluralModelLabel = 'البوابات';
-
+    protected static ?int $navigationSort = 1;
+    
+    protected static ?string $navigationGroup = 'إدارة المدارس';
+    
 
     public static function getEloquentQuery(): Builder
     {

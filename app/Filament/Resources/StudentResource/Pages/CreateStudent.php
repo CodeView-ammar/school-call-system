@@ -68,20 +68,19 @@ class CreateStudent extends CreateRecord
         return $year . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
-    private function generateStudentCode( $school_id): string
-    {
-        $schoolId = $school_id;
-        $prefix = 'STU';
+  private function generateStudentCode($school_id): string
+{
+    $prefix = 'STU';
 
-        // البحث عن أكبر رقم حاليًا بدون استخدام while
-        $lastNumber = \App\Models\Student::where('school_id', $schoolId)
-            ->where('code', 'like', $prefix . '%')
-            ->selectRaw("MAX(CAST(SUBSTR(code, LENGTH('$prefix') + 1) AS INTEGER)) as max_code")
-            ->value('max_code');
+    // البحث عن أكبر رقم حاليًا بدون استخدام while
+    $lastNumber = \App\Models\Student::where('school_id', $school_id)
+        ->where('code', 'like', $prefix . '%')
+        ->selectRaw("MAX(CAST(SUBSTR(code, LENGTH(?) + 1) AS UNSIGNED)) as max_code", [$prefix])
+        ->value('max_code');
 
-            $newNumber = (int) $lastNumber + 1;
-            // dd($prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT));
-        return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
-    }
+    $newNumber = (int) $lastNumber + 1;
+
+    return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
+}
 
 }

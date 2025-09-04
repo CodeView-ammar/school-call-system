@@ -43,6 +43,10 @@ class BusRouteResource extends Resource
         return $query;
     }
 
+    public static function canViewAny(): bool
+    {
+        return false;
+    }
     public static function form(Form $form): Form
     {
         return $form

@@ -30,53 +30,82 @@ class HolidayResource extends Resource
             return $query;
         }
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Grid::make(2)
-                    ->schema([
-                        Forms\Components\TextInput::make('name_ar')
-                            ->label('اسم العطلة (عربي)')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('name_en')
-                            ->label('اسم العطلة (إنجليزي)')
-                            ->maxLength(255),
-                    ]),
-                
-                Forms\Components\Grid::make(2)
-                    ->schema([
-                        Forms\Components\DatePicker::make('from_date')
-                            ->label('تاريخ بداية العطلة')
-                            ->required()
-                            ->native(false),
-                        Forms\Components\DatePicker::make('to_date')
-                            ->label('تاريخ نهاية العطلة')
-                            ->required()
-                            ->native(false)
-                            ->after('from_date'),
-                    ]),
-                
-                Forms\Components\Grid::make(2)
-                    ->schema([
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('نشط')
-                            ->default(true),
-                    auth()->user()?->school_id === null
-                    ? Forms\Components\Select::make('school_id')
-                        ->label('المدرسة')
-                        ->relationship('school', 'name_ar')
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\TextInput::make('name_ar')
+                        ->label('اسم العطلة (عربي)')
                         ->required()
-                        ->searchable()
-                        ->preload()
-                    : Forms\Components\Hidden::make('school_id')
-                        ->default(auth()->user()->school_id)
-                        ->dehydrated(true)
-                        ->required(),
-                            ])
-            ]);
-    }
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('name_en')
+                        ->label('اسم العطلة (إنجليزي)')
+                        ->nullable()
+                        ->maxLength(255),
+                ]),
+
+            Forms\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\DatePicker::make('from_date')
+                        ->label('تاريخ بداية العطلة')
+                        ->required()
+                        ->native(false)
+                        ->rules([
+                            function (\Filament\Forms\Get $get) {
+                                return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                    $from = $value;
+                                    $to   = $get('to_date');
+                                    $schoolId = $get('school_id') ?? auth()->user()->school_id;
+
+                                    if (!$from || !$to) {
+                                        return;
+                                    }
+
+                                    $query = \App\Models\Holiday::where('school_id', $schoolId)
+                                        ->where(function ($q) use ($from, $to) {
+                                            $q->where('from_date', '<=', $to)
+                                              ->where('to_date', '>=', $from);
+                                        });
+
+                                    // إذا تعديل -> استثني السجل الحالي
+                                    if ($recordId = request()->route('record')) {
+                                        $query->where('id', '!=', $recordId);
+                                    }
+
+                                    if ($query->exists()) {
+                                        $fail('⚠️ يوجد عطلة أخرى متداخلة مع التاريخ المدخل.');
+                                    }
+                                };
+                            },
+                        ]),
+                    Forms\Components\DatePicker::make('to_date')
+                        ->label('تاريخ نهاية العطلة')
+                        ->required()
+                        ->native(false),
+                ]),
+
+            Forms\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\Toggle::make('is_active')
+                        ->label('نشط')
+                        ->default(true),
+
+                    auth()->user()?->school_id === null
+                        ? Forms\Components\Select::make('school_id')
+                            ->label('المدرسة')
+                            ->relationship('school', 'name_ar')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                        : Forms\Components\Hidden::make('school_id')
+                            ->default(auth()->user()->school_id)
+                            ->dehydrated(true)
+                            ->required(),
+                ]),
+        ]);
+}
 
     public static function table(Table $table): Table
     {

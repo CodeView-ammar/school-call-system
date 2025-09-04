@@ -20,6 +20,32 @@ class CallTypeResource extends Resource
     protected static ?string $modelLabel = 'نوع النداء';
     protected static ?string $pluralModelLabel = 'أنواع الندائات';
 
+    protected static ?string $navigationGroup = 'إدارة النظام';
+    // إظهار الصفحة للمدير الأساسي فقط
+    public static function canViewAny(): bool
+    {
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
+    }
+    
+    public static function canCreate(): bool
+    {
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
+    }
+    
+    public static function canEdit($record): bool
+    {
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
+    }
+    
+    public static function canDelete($record): bool
+    {
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
+    }
+    
+    public static function canDeleteAny(): bool
+    {
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -31,27 +57,6 @@ class CallTypeResource extends Resource
 
         return $query;
     }
-     
-    public static function canCreate(): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
-    
-    public static function canEdit($record): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
-    
-    public static function canDeleteAny(): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
-    
-    public static function canDelete($record): bool
-    {
-        return auth()->user()?->hasRole('super_admin') ?? false;
-    }
-    
     public static function form(Form $form): Form
     {
 

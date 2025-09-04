@@ -14,7 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Illuminate\Validation\Rule;
 class EducationLevelResource extends Resource
 {
     protected static ?string $model = EducationLevel::class;
@@ -40,42 +40,61 @@ class EducationLevelResource extends Resource
  
         return $query;
     }
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-               
-                Forms\Components\Grid::make(2)
-                    ->schema([
-                        Forms\Components\TextInput::make('name_ar')
-                            ->label('اسم المرحلة (عربي)')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('name_en')
-                            ->label('Stage Name (English)')
-                            ->required()
-                            ->maxLength(255),
-                    ]),
-                Forms\Components\TextInput::make('short_name')
-                    ->label('الاسم المختصر')
-                    ->maxLength(10),
-                Forms\Components\Toggle::make('is_active')
-                    ->label('نشط')
-                    ->default(true),
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\TextInput::make('name_ar')
+                        ->label('اسم المرحلة (عربي)')
+                        ->required()
+                        ->maxLength(255)
+                        ->rule(function ($get, $record) {
+                            $schoolId = $get('school_id') ?? auth()->user()->school_id;
+
+                            return Rule::unique('education_levels', 'name_ar')
+                                ->where('school_id', $schoolId)
+                                ->ignore($record?->id);
+                        }),
+
+                    Forms\Components\TextInput::make('name_en')
+                        ->label('Stage Name (English)')
+                        ->required()
+                        ->maxLength(255),
+                ]),
+
+            Forms\Components\TextInput::make('short_name')
+                ->label('الاسم المختصر')
+                ->nullable()
+                ->maxLength(50)
+                ->rule(function ($get, $record) {
+                    $schoolId = $get('school_id') ?? auth()->user()->school_id;
+
+                    return Rule::unique('education_levels', 'short_name')
+                        ->where('school_id', $schoolId)
+                        ->ignore($record?->id);
+                }),
+
+            Forms\Components\Toggle::make('is_active')
+                ->label('نشط')
+                ->default(true),
+
             auth()->user()?->school_id === null
-            ? Select::make('school_id')
-                ->label('المدرسة')
-                ->relationship('school', 'name_ar')
-                ->required()
-                ->searchable()
-                ->preload()
-            : Forms\Components\Hidden::make('school_id')
-                ->default(auth()->user()->school_id)
-                ->dehydrated(true)
-                ->required(),
-                    
-                ]);
-    }
+                ? Forms\Components\Select::make('school_id')
+                    ->label('المدرسة')
+                    ->relationship('school', 'name_ar')
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                : Forms\Components\Hidden::make('school_id')
+                    ->default(auth()->user()->school_id)
+                    ->dehydrated(true)
+                    ->required(),
+        ]);
+}
+
+
 
     public static function table(Table $table): Table
     {

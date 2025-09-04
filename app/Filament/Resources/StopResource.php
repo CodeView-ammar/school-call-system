@@ -31,6 +31,18 @@ class StopResource extends Resource
     protected static ?string $navigationGroup = 'إدارة النقل';
     
     protected static ?int $navigationSort = 1;
+ 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+
+        return $query;
+    }
 
 
 public static function form(Form $form): Form
@@ -43,13 +55,13 @@ public static function form(Form $form): Form
                     // العمود الأيمن: الحقول
                     Forms\Components\Section::make('الحقول')
                         ->schema([
-                            Forms\Components\Select::make('school_id')
-                                ->label('المدرسة')
-                                ->relationship('school', 'name_ar')
-                                ->searchable()
-                                ->preload()
-                                ->required()
-                                ->reactive() // اجعلها تفاعلية
+                                Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                                    ->default(auth()->user()?->school_id)
+                                    ->hidden(fn () => auth()->user()?->school_id !== null)
+                                    ->required()
+                                    ->reactive() // اجعلها تفاعلية
                                 ->afterStateUpdated(function (callable $set, $state) {
                                     // عند تحديث المدرسة، قم بتحديث قائمة الطلاب
                                     $set('student_id', null); // إعادة تعيين الطالب عند تغيير المدرسة
@@ -70,7 +82,7 @@ public static function form(Form $form): Form
                                 // ])
                                 ->options(function (callable $get) {
                                     $schoolId = $get('school_id');
-                                    return Student::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                    return Student::where('school_id', auth()->user()?->school_id)->pluck('name_ar', 'id');
                                 })
                                 ->afterStateUpdated(function (callable $set, $state) {
                                     $student = Student::find($state);

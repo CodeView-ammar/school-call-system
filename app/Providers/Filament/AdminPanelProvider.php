@@ -31,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('/admin')
             ->login()
-            ->brandName('Smart Call - نظام النداء الذكي')
+            ->brandName('نظام إنصراف الذكي')
             ->favicon('/favicon.ico')
             ->font('tajawal', 'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap')
             ->colors([
@@ -56,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\LatestSchoolsWidget::class,
             ])
             ->navigationGroups([
-                NavigationGroup::make()->label('نظام النداء الذكي'),
+                NavigationGroup::make()->label('نظام إنصراف الذكي'),
                 NavigationGroup::make()->label('المحتوى'),
                 NavigationGroup::make()->label('الإشعارات'),
                 NavigationGroup::make()->label('الإعدادات'),

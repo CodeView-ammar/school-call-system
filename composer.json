@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "bezhansalleh/filament-language-switch": "^3.1",
+        "blade-ui-kit/blade-icons": "^1.8",
         "filament/filament": "^3.0",
         "laravel/fortify": "^1.27",
         "laravel/framework": "^12.0",

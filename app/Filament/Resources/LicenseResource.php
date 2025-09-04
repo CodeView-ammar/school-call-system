@@ -3,15 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\LicenseResource\Pages;
-use App\Filament\Resources\LicenseResource\RelationManagers;
 use App\Models\License;
+use App\Models\School;
+use App\Models\Subscription;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class LicenseResource extends Resource
 {
@@ -25,44 +24,67 @@ class LicenseResource extends Resource
 // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canEdit($record): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
     
     public static function canDeleteAny(): bool
     {
-        return auth()->user()?->hasRole('super_admin') ?? false;
+        return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
+
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('lic_start_at')
+                Forms\Components\Select::make('school_id')
+                    ->label('المدرسة')
+                    ->options(
+                        School::all()->mapWithKeys(function ($school) {
+                            return [$school->id => $school->name_ar ?? 'بدون اسم'];
+                        })
+                    )
                     ->required(),
-                Forms\Components\TextInput::make('lic_end_at')
+
+                Forms\Components\Select::make('subscription_id')
+                    ->label('الاشتراك')
+                    ->options(
+                        Subscription::all()->mapWithKeys(function ($sub) {
+                            return [$sub->id => $sub->name ?? 'بدون اسم'];
+                        })
+                    )
                     ->required(),
-                Forms\Components\TextInput::make('lic_by_user')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('lic_cdate'),
-                Forms\Components\TextInput::make('lic_udate'),
-                Forms\Components\TextInput::make('lic_cust_code'),
-                Forms\Components\TextInput::make('lic_isactive'),
+                Forms\Components\DateTimePicker::make('starts_at')
+                    ->label('تاريخ البداية')
+                    ->required(),
+
+                Forms\Components\DateTimePicker::make('ends_at')
+                    ->label('تاريخ الانتهاء')
+                    ->required(),
+
+            Forms\Components\Hidden::make('created_by')
+                ->default(fn () =>  auth()->user()->id)
+                ->dehydrated(true) // إجباراً يترسل
+                ->required(),
+
+                Forms\Components\Toggle::make('is_active')
+                    ->label('نشط')
+                    ->default(true),
             ]);
     }
 
@@ -70,48 +92,53 @@ class LicenseResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('lic_start_at')
+                Tables\Columns\TextColumn::make('school.name_ar')
+                    ->label('المدرسة')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('lic_end_at')
+
+                Tables\Columns\TextColumn::make('subscription.name')
+                    ->label('الاشتراك')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('lic_by_user')
-                    ->numeric()
+
+                Tables\Columns\TextColumn::make('starts_at')
+                    ->label('تاريخ البداية')
+                    ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('lic_cdate')
+
+                Tables\Columns\TextColumn::make('ends_at')
+                    ->label('تاريخ الانتهاء')
+                    ->dateTime()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('تم الإنشاء بواسطة')
+                    ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('lic_udate')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('lic_cust_code')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('lic_isactive')
-                    ->searchable(),
+
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('نشط')
+                    ->boolean()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array

@@ -10,40 +10,55 @@ class License extends Model
     use HasFactory;
 
     protected $table = 'licenses';
-    protected $primaryKey = 'lic_id';
+    protected $primaryKey = 'id'; // تم تغيير المفتاح الأساسي
 
     protected $fillable = [
-        'lic_start_at',
-        'lic_end_at',
-        'lic_by_user',
-        'lic_cdate',
-        'lic_udate',
-        'lic_cust_code',
-        'lic_isactive',
+        'school_id',
+        'subscription_id',
+        'starts_at',
+        'ends_at',
+        'created_by',
+        'is_active',
     ];
 
     protected $casts = [
-        'lic_start_at' => 'date',
-        'lic_end_at' => 'date',
-        'lic_cdate' => 'datetime',
-        'lic_udate' => 'datetime',
-        'lic_isactive' => 'boolean',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
-
+    protected static function booted()
+    {
+        static::creating(function ($license) {
+            if (auth()->check()) {
+                $license->created_by = auth()->user()->id;
+            }
+        });
+    }
     // العلاقات
     public function user()
     {
-        return $this->belongsTo(User::class, 'lic_by_user');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    // نطاقات
+    public function school()
+    {
+        return $this->belongsTo(School::class, 'school_id');
+    }
+
+    public function subscription()
+    {
+        return $this->belongsTo(Subscription::class, 'subscription_id');
+    }
+
+    
+    // نطاقات (Scopes)
     public function scopeActive($query)
     {
-        return $query->where('lic_isactive', '1');
+        return $query->where('is_active', true);
     }
 
     public function scopeValid($query)
     {
-        return $query->where('lic_end_at', '>=', now()->toDateString());
+        return $query->where('ends_at', '>=', now());
     }
 }

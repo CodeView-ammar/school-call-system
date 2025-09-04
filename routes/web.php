@@ -11,6 +11,6 @@ Route::get('/', function () {
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('filament.admin.locale');
 
 
-Route::get('/admin/notifications', function () {
-    return view('filament.pages.notifications'); // مثال مؤقت
-})->name('notifications');
+// Route::get('/admin/notifications', function () {
+//     return view('filament.pages.notifications'); // مثال مؤقت
+// })->name('notifications');

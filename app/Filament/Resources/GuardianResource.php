@@ -91,21 +91,18 @@ class GuardianResource extends Resource
                                     ->unique(ignoreRecord: true)
                                     ->maxLength(20),
                             ]),
-                        Forms\Components\Select::make('relationship')
+                       Forms\Components\Select::make('relationship')
                             ->label('صلة القرابة')
                             ->options([
-                                'أب' => 'أب',
-                                'أم' => 'أم',
-                                'جد' => 'جد',
-                                'جدة' => 'جدة',
-                                'عم' => 'عم',
-                                'خال' => 'خال',
-                                'عمة' => 'عمة',
-                                'خالة' => 'خالة',
-                                'أخرى' => 'أخرى',
+                                'father' => 'أب',
+                                'mother' => 'أم',
+                                'grandfather' => 'جد',
+                                'grandmother' => 'جدة',
+                                'uncle' => 'عم',
+                                'aunt' => 'عمة',
+                                'other' => 'أخرى',
                             ])
                             ->required(),
-                            
                         Forms\Components\Grid::make(1)
                             ->schema([
                                 Forms\Components\Textarea::make('address_ar')

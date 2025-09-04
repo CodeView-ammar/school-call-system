@@ -37,66 +37,93 @@ class GradeClassResource extends Resource
 
         return $query;
     }
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('بيانات الصف الدراسي')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('name_ar')
-                                    ->label('اسم الصف (عربي)')
-                                    ->required()
-                                    ->maxLength(255),
-                                    
-                                Forms\Components\TextInput::make('name_en')
-                                    ->label('اسم الصف (إنجليزي)')
-                                    ->required()
-                                    ->maxLength(255),
+public static function form(Form $form): Form
+{
+    $user = auth()->user();
 
-                                Forms\Components\Select::make('academic_band_id')
-                                    ->label('الفرقة الدراسية')
-                                    ->options(AcademicBand::query()->pluck('name_ar', 'id'))
+    return $form
+        ->schema([
+            Forms\Components\Section::make('بيانات الصف الدراسي')
+                ->schema([
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            // المدرسة
+                            $user?->school_id === null
+                                ? Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->relationship('school', 'name_ar')
                                     ->required()
                                     ->searchable()
-                                    ->preload(),
-                                Forms\Components\Select::make('branch_id')
-                                    ->label('الفرع')
-                                    ->options(Branch::query()->pluck('name_ar', 'id'))
-                                    ->required()
-                                    ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->reactive()
+                                    ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)) // reset عند تغيير المدرسة
+                                : Forms\Components\Hidden::make('school_id')
+                                    ->default($user->school_id)
+                                    ->dehydrated(true)
+                                    ->required(),
 
+                            // الفرع
+                            Forms\Components\Select::make('branch_id')
+                                ->label('الفرع')
+                                ->required()
+                                ->searchable()
+                                ->preload()
+                                ->options(function (callable $get) {
+                                    $schoolId = $get('school_id') ?? auth()->user()->school_id;
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
+                                    return \App\Models\Branch::where('school_id', $schoolId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->reactive()
+                                ->afterStateUpdated(fn ($state, callable $set) => $set('academic_band_id', null)), // reset عند تغيير الفرع
 
-                            ]),
-                            
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\Textarea::make('description')
-                                    ->label('الوصف')
-                                    ->rows(3)
-                                    ->columnSpan(1),
-                                    
-                                Forms\Components\Toggle::make('is_active')
-                                    ->label('مفعل')
-                                    ->default(true)
-                                    ->columnSpan(1),
-                            ]),
-                            auth()->user()?->school_id === null
-                    ? Forms\Components\Select::make('school_id')
-                        ->label('المدرسة')
-                        ->relationship('school', 'name_ar')
-                        ->required()
-                        ->searchable()
-                        ->preload()
-                    : Forms\Components\Hidden::make('school_id')
-                        ->default(auth()->user()->school_id)
-                        ->dehydrated(true)
-                        ->required(),
-                    ]),
-            ]);
-    }
+                            // الاسم عربي
+                            Forms\Components\TextInput::make('name_ar')
+                                ->label('اسم الصف (عربي)')
+                                ->required()
+                                ->maxLength(255),
+
+                            // الاسم انجليزي
+                            Forms\Components\TextInput::make('name_en')
+                                ->label('اسم الصف (إنجليزي)')
+                                ->required()
+                                ->maxLength(255),
+
+                            // الفرقة الدراسية (حسب المدرسة)
+                            Forms\Components\Select::make('academic_band_id')
+                                ->label('الفرقة الدراسية')
+                                ->options(function (callable $get) {
+                                    $schoolId = $get('school_id') ?? auth()->user()->school_id;
+                                    if (!$schoolId) {
+                                        return [];
+                                    }
+                                    return \App\Models\AcademicBand::where('school_id', $schoolId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->required()
+                                ->searchable()
+                                ->preload()
+                                ->reactive(),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\Textarea::make('description')
+                                ->label('الوصف')
+                                ->rows(3)
+                                ->columnSpan(1),
+
+                            Forms\Components\Toggle::make('is_active')
+                                ->label('مفعل')
+                                ->default(true)
+                                ->columnSpan(1),
+                        ]),
+                ]),
+        ]);
+}
+
 
     public static function table(Table $table): Table
     {

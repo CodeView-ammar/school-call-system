@@ -56,38 +56,121 @@ class AttendanceResource extends Resource
 
         return $query;
     }
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Forms\Components\Section::make('بيانات الحضور')
+                ->schema([
 
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('student_id')
-                    ->label('الطالب')
-                    ->relationship('student', 'displayName')
-                    ->required(),
-                
-                Forms\Components\Select::make('branch_id')
-                    ->label('الفرع')
-                    ->relationship('branch', 'name')
-                    ->required(),
+                    Forms\Components\Grid::make(2)
+                        ->schema([
 
-                Forms\Components\DatePicker::make('attendance_date')
-                    ->label('تاريخ الحضور')
-                    ->required(),
+                            // المدرسة
+                            auth()->user()?->school_id === null
+                                ? Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->relationship('school', 'name_ar')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                : Forms\Components\Hidden::make('school_id')
+                                    ->default(auth()->user()->school_id)
+                                    ->dehydrated(true)
+                                    ->required(),
 
-                Forms\Components\Select::make('status')
-                    ->label('الحالة')
-                    ->options([
-                        'present' => 'حاضر',
-                        'absent' => 'غائب',
-                    ])
-                    ->required(),
+                            // الفرع
+                            Forms\Components\Select::make('branch_id')
+                                ->label('الفرع')
+                                ->searchable()
+                                ->preload()
+                                ->options(function (callable $get) {
+                                    $schoolId = $get('school_id') ?? auth()->user()->school_id;
+                                    if (!$schoolId) return [];
+                                    return \App\Models\Branch::where('school_id', $schoolId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->reactive()
+                                ->required(),
 
-                Forms\Components\Textarea::make('notes')
-                    ->label('ملاحظات')
-                    ->nullable(),
-            ]);
-    }
+                            // الصف الدراسي
+                            Forms\Components\Select::make('grade_class_id')
+                                ->label('الصف الدراسي')
+                                ->searchable()
+                                ->preload()
+                                ->options(function (callable $get) {
+                                    $branchId = $get('branch_id');
+                                    if (!$branchId) return [];
+                                    return \App\Models\GradeClass::where('branch_id', $branchId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->reactive()
+                                ->required(),
+
+                            // الطالب
+                            Forms\Components\Select::make('student_id')
+                                ->label('الطالب')
+                                ->searchable()
+                                ->required()
+                                ->preload()
+                                ->options(function (callable $get) {
+                                    $gradeClassId = $get('grade_class_id');
+                                    if (!$gradeClassId) return [];
+                                    return \App\Models\Student::where('grade_class_id', $gradeClassId)
+                                        ->pluck('name_ar', 'id');
+                                })
+                                ->reactive(),
+                                
+                            // التاريخ
+                            Forms\Components\DatePicker::make('attendance_date')
+                                ->label('تاريخ الحضور')
+                                ->required()
+                                ->default(today()),
+                        ]),
+
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+
+                            Forms\Components\Select::make('status')
+                                ->label('الحالة')
+                                ->required()
+                                ->options([
+                                    'present'   => 'حاضر',
+                                    'absent'    => 'غائب',
+                                    'late'      => 'متأخر',
+                                    'picked_up' => 'تم استلامه',
+                                ])
+                                ->default('present'),
+
+                            Forms\Components\TimePicker::make('check_in_time')
+                                ->label('وقت الدخول')
+                                ->seconds(false)
+                                ->nullable(),
+
+                            Forms\Components\TimePicker::make('check_out_time')
+                                ->label('وقت الخروج')
+                                ->seconds(false)
+                                ->nullable(),
+                        ]),
+
+                    Forms\Components\Textarea::make('notes')
+                        ->label('ملاحظات')
+                        ->rows(3)
+                        ->nullable(),
+                Forms\Components\Hidden::make('user_id')
+                    ->default(fn() => auth()->id())
+                    ->dehydrated(true)
+                    ->required(),
+                  
+              Forms\Components\Hidden::make('recorded_by')
+                ->default(fn () => auth()->id()) // id من جدول users
+                ->dehydrated(true)
+                ->nullable(),
+                ]),
+        ]);
+}
+
 
     public static function table(Table $table): Table
     {
@@ -130,12 +213,13 @@ class AttendanceResource extends Resource
                     ]),
             ])
             ->actions([
-                // Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                // Tables\Actions\BulkActionGroup::make([
-                //     Tables\Actions\DeleteBulkAction::make(),
-                // ]),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
@@ -150,6 +234,7 @@ class AttendanceResource extends Resource
     {
         return [
             'index' => Pages\ListAttendances::route('/'),
+            'create' => Pages\CreateAttendance::route('/create'),
         ];
     }
 }

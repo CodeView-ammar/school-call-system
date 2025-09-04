@@ -29,9 +29,9 @@ class AttendanceChart extends ChartWidget
         for ($i = 6; $i >= 0; $i--) {
             $date = $now->copy()->subDays($i);
             $days[] = $date->translatedFormat('D');
-            
-            $query = Attendance::whereDate('date', $date);
-            
+
+            $query = Attendance::whereDate('attendance_date', $date);
+
             // تصفية حسب صلاحيات المستخدم
             if (!$user->hasRole('super_admin')) {
                 $schoolIds = $user->schools->pluck('id');

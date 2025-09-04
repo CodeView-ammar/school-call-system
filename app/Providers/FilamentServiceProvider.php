@@ -23,12 +23,12 @@ class FilamentServiceProvider extends ServiceProvider
      
     Filament::serving(function () {
         Filament::registerNavigationItems([
-            NavigationItem::make()
-                ->label('الإشعارات')
-                ->icon('heroicon-o-bell')
-                ->url(route('notifications')) // رابط صفحة الإشعارات
-                ->group('النظام')
-                ->sort(0),
+            // NavigationItem::make()
+            //     ->label('الإشعارات')
+            //     ->icon('heroicon-o-bell')
+            //     ->url(route('notifications')) // رابط صفحة الإشعارات
+            //     ->group('النظام')
+            //     ->sort(0),
         ]);
     });
     }

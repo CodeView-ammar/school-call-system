@@ -178,7 +178,20 @@ class School extends Model
         return $this->hasMany(Gate::class);
     }
     public function gradeClasses()
-{
-    return $this->hasMany(GradeClass::class);
-}
+    {
+        return $this->hasMany(GradeClass::class);
+    }
+    public function licenses()
+    {
+        return $this->hasMany(License::class, 'school_id');
+    }
+
+    // التحقق من الاشتراك الحالي للمدرسة
+    public function hasValidSubscription(): bool
+    {
+        return $this->licenses()
+            ->active()   // نطاق is_active = true
+            ->valid()    // نطاق ends_at >= now()
+            ->exists();
+    }
 }

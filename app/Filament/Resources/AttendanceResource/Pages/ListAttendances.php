@@ -41,6 +41,11 @@ class ListAttendances extends ListRecords
 protected function getHeaderActions(): array
 {
     return [
+        Action::make('createAttendance')
+        ->label('إضافة حضور')
+        ->icon('heroicon-o-plus')
+        ->url(fn () => AttendanceResource::getUrl('create'))
+        ->color('success'),
         Action::make('previousDate')
             ->label('اليوم السابق')
             ->icon('heroicon-m-chevron-right')
