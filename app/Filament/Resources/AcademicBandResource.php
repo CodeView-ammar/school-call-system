@@ -37,64 +37,70 @@ class AcademicBandResource extends Resource
 
         return $query;
     }
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
+public static function form(Form $form): Form
+{
+    $user = auth()->user();
 
-                 auth()->user()?->school_id === null
-                    ? Forms\Components\Select::make('school_id')
-                        ->label('المدرسة')
-                        ->relationship('school', 'name_ar')
-                        ->required()
-                        ->searchable()
-                        ->preload()
-                    : Forms\Components\Hidden::make('school_id')
-                        ->default(auth()->user()->school_id)   // القيمة من المستخدم
-                        ->dehydrated(true)                     // يرسل مع البيانات
-                        ->required(),
-                    Forms\Components\Select::make('gate_id')
-                    ->label('البوابة الدخول')
-                    ->options(function (callable $get) {
-                        $schoolId = $get('school_id');
-                        return $schoolId
-                            ? Gate::where('school_id', $schoolId)->pluck('name', 'id')
-                            : [];
-                    })
+    return $form
+        ->schema([
+            // اختيار المدرسة (للأدمن فقط)
+            $user->hasRole('super_admin') || $user->hasRole('school_admin')
+                ? Forms\Components\Select::make('school_id')
+                    ->label('المدرسة')
+                    ->relationship('school', 'name_ar')
+                    ->required()
                     ->searchable()
-                    ->required()
-                    ->disabled(fn (callable $get) => $get('school_id') === null),
-                    Forms\Components\Select::make('education_level_id')
-                        ->label('المرحلة الدراسية')
-                        ->options(function (callable $get) {
-                            $schoolId = $get('school_id') ?? auth()->user()?->school_id;
-                            return $schoolId
-                                ? EducationLevel::where('school_id', $schoolId)->pluck('name_ar', 'id')
-                                : [];
-                        })
-                        ->searchable()
-                        ->required()
-                        ->disabled(fn (callable $get) => $get('school_id') === null),
-                Forms\Components\TextInput::make('name_ar')
-                    ->label('الاسم العربي')
-                    ->required()
-                    ->maxLength(255),
-                
-                Forms\Components\TextInput::make('name_en')
-                    ->label('الاسم الإنجليزي')
-                    ->required()
-                    ->maxLength(255),
+                    ->preload()
+                    ->reactive()
+                : Forms\Components\Hidden::make('school_id')
+                    ->default($user->school_id)   // القيمة من المستخدم
+                    ->dehydrated(true)            // يرسل مع البيانات
+                    ->required(),
 
-                Forms\Components\TextInput::make('short_name')
-                    ->label('الاسم المختصر')
-                    ->required()
-                    ->maxLength(50),
+            Forms\Components\Select::make('gate_id')
+                ->label('بوابة الدخول')
+                ->options(function (callable $get) {
+                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                    return $schoolId
+                        ? \App\Models\Gate::where('school_id', $schoolId)->pluck('name', 'id')
+                        : [];
+                })
+                ->searchable()
+                ->required()
+                ->disabled(fn (callable $get) => $get('school_id') === null),
 
-                Forms\Components\Toggle::make('is_active')
-                    ->label('نشط')
-                    ->default(true),
-            ]);
-    }
+            Forms\Components\Select::make('education_level_id')
+                ->label('المرحلة الدراسية')
+                ->options(function (callable $get) {
+                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                    return $schoolId
+                        ? \App\Models\EducationLevel::where('school_id', $schoolId)->pluck('name_ar', 'id')
+                        : [];
+                })
+                ->searchable()
+                ->required()
+                ->disabled(fn (callable $get) => $get('school_id') === null),
+
+            Forms\Components\TextInput::make('name_ar')
+                ->label('الاسم العربي')
+                ->required()
+                ->maxLength(255),
+
+            Forms\Components\TextInput::make('name_en')
+                ->label('الاسم الإنجليزي')
+                ->required()
+                ->maxLength(255),
+
+            Forms\Components\TextInput::make('short_name')
+                ->label('الاسم المختصر')
+                ->required()
+                ->maxLength(50),
+
+            Forms\Components\Toggle::make('is_active')
+                ->label('نشط')
+                ->default(true),
+        ]);
+}
 
     public static function table(Table $table): Table
     {

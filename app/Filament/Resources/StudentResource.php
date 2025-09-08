@@ -190,14 +190,14 @@ public static function form(Form $form): Form
                 Forms\Components\Textarea::make('medical_notes')
                     ->label('ملاحظات طبية')
                     ->rows(2),
-              Forms\Components\View::make('filament.forms.components.student-map-picker')
-                    ->label('الموقع الجغرافي')
-                    ->beforeStateDehydrated(function ($state, callable $set) {
-                        if (isset($state['latitude']) && isset($state['longitude'])) {
-                            $set('latitude', $state['latitude']);
-                            $set('longitude', $state['longitude']);
-                        }
-                    }),
+                    // العمود الأيسر: الخريطة
+                    Forms\Components\Section::make('الخريطة')
+                        ->schema([
+                            Forms\Components\ViewField::make('map')
+                                ->label('حدد الموقع على الخريطة')
+                                ->view('filament.custom.map-picker')
+                                ->extraAttributes(['wire:ignore']),
+                        ]),
 
                 Forms\Components\TextInput::make('latitude')
                     ->label('خط العرض')
