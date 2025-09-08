@@ -7,7 +7,6 @@ use App\Filament\Resources\GuardianResource\RelationManagers;
 use App\Filament\Resources\GuardianResource\Actions;
 use App\Models\Guardian;
 use App\Models\User;
-
 use App\Models\Student;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -15,9 +14,10 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Database\Eloquent\Model; // Import the Model class
-
+use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
+use Illuminate\Database\QueryException;
+use Filament\Forms\Components\Actions\ActionFailedException;
 class GuardianResource extends Resource
 {
     protected static ?string $model = Guardian::class;
@@ -33,16 +33,18 @@ class GuardianResource extends Resource
     protected static ?string $navigationGroup = 'إدارة الطلاب';
 
     protected static ?int $navigationSort = 2;
+
     public static function getEloquentQuery(): Builder
-        {
-            $query = parent::getEloquentQuery();
+    {
+        $query = parent::getEloquentQuery();
 
-            if (auth()->user()?->school_id) {
-                $query->where('school_id', auth()->user()->school_id);
-            }
-
-            return $query;
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
         }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -53,21 +55,11 @@ class GuardianResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('school_id')
                                     ->label('المدرسة')
-                                    ->relationship('school', 'name_ar')
+                                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
+                                    ->default(auth()->user()?->school_id)
+                                    ->disabled(fn () => auth()->user()?->school_id !== null)
                                     ->required()
-                                    ->searchable()
-                                    ->preload()
-                                    ->columnSpanFull(),
-
-                         
-                                // Forms\Components\Select::make('user_id')
-                                //     ->label('المستخدم')
-                                //     ->relationship('user', 'name') // بدل name_ar إلى name
-                                //     ->required()
-                                //     ->options(\App\Models\User::where('user_type', 'guardian')->pluck('name', 'id'))
-                                //     ->searchable()
-                                //     ->preload()
-                                //     ->columnSpanFull(),
+                                    ->reactive(),
                                 Forms\Components\TextInput::make('name_ar')
                                     ->label('الاسم (عربي)')
                                     ->required()
@@ -91,7 +83,7 @@ class GuardianResource extends Resource
                                     ->unique(ignoreRecord: true)
                                     ->maxLength(20),
                             ]),
-                       Forms\Components\Select::make('relationship')
+                        Forms\Components\Select::make('relationship')
                             ->label('صلة القرابة')
                             ->options([
                                 'father' => 'أب',
@@ -227,12 +219,11 @@ class GuardianResource extends Resource
             'view' => Pages\ViewGuardians::route('/{record}/view'),
         ];
     }
+public static function handleRecordCreation(array $data): Model
+{
+    $guardian = Guardian::create(collect($data)->except(['student_ids'])->toArray());
 
-    public static function handleRecordCreation(array $data): Model
-    {
-        // إنشاء Guardian بدون user_id
-        $guardian = Guardian::create(collect($data)->except(['student_ids'])->toArray());
-        // إنشاء المستخدم
+    try {
         $user = User::create([
             'name'      => $guardian->name_ar,
             'email'     => $guardian->email ?? 'guardian' . $guardian->id . '@example.com',
@@ -243,23 +234,38 @@ class GuardianResource extends Resource
             'school_id' => $guardian->school_id,
         ]);
 
-        // ربط Guardian بالمستخدم
         $guardian->user_id = $user->id;
         $guardian->save();
+    } catch (\Illuminate\Database\QueryException $e) {
+        if ($e->getCode() === '23000') { // Duplicate entry
+            $guardian->delete(); // حذف الـ Guardian غير المكتمل
 
-        // ربط الطلاب
-        if (!empty($data['student_ids'])) {
-            $guardian->students()->attach($data['student_ids']);
+            // عرض Notification ودّي
+            Notification::make()
+                ->title('خطأ')
+                ->body('البريد الإلكتروني أو الهاتف مستخدم بالفعل. الرجاء اختيار بيانات أخرى.')
+                ->danger()
+                ->send();
+
+            // إنشاء مستخدم وهمي مؤقت لإرجاع Model صالح حتى لا يظهر TypeError
+            return $guardian; 
         }
 
-        return $guardian;
+        throw $e; // أي خطأ آخر نعيد رميه
     }
 
+    // ربط الطلاب
+    if (!empty($data['student_ids'])) {
+        $guardian->students()->attach($data['student_ids']);
+    }
+
+    return $guardian;
+}
 
     public static function handleRecordUpdate(Model $record, array $data): Model
     {
         $record->update(collect($data)->except(['student_ids'])->toArray());
-        dd("aa");
+
         // مزامنة الطلاب الموجودين فقط
         if (isset($data['student_ids'])) {
             $record->students()->sync($data['student_ids']);

@@ -28,26 +28,6 @@
             <span id="routeDistance">0 كم</span>
         </div>
     </div>
-<!--     
-    <div class="drag-instructions" style="padding: 12px 16px; background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); border-bottom: 1px solid #b3e5fc; font-size: 13px; color: #01579b;">
-        <div style="display: grid; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="font-size: 18px;">✨</span>
-                <strong style="font-size: 14px;">طرق الرسم التفاعلي للمسارات:</strong>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; padding-left: 26px;">
-                <span style="color: #0369a1;">👆</span>
-                <span><strong>الطريقة السهلة:</strong> انقر على نقطة، ثم انقر على نقطة أخرى لرسم المسار</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; padding-left: 26px;">
-                <span style="color: #0369a1;">🖱️</span>
-                <span><strong>طريقة السحب:</strong> اضغط Shift + اسحب من نقطة لأخرى</span>
-            </div>
-            <div style="padding-left: 26px; font-size: 12px; opacity: 0.8; margin-top: 4px;">
-                سيتم إضافة النقاط تلقائياً لقائمة التوقفات مع حساب المسافة
-            </div>
-        </div>
-    </div> -->
 
     <div id="map" style="height: 500px; width: 100%;" wire:ignore></div>
 

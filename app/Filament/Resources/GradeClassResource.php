@@ -14,6 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\Rule;
 
 class GradeClassResource extends Resource
 {
@@ -43,7 +44,7 @@ public static function form(Form $form): Form
 
     return $form
         ->schema([
-            Forms\Components\Section::make('بيانات الصف الدراسي')
+            Forms\Components\Section::make('بيانات الفصل الدراسي')
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->schema([
@@ -80,14 +81,21 @@ public static function form(Form $form): Form
                                 ->afterStateUpdated(fn ($state, callable $set) => $set('academic_band_id', null)), // reset عند تغيير الفرع
 
                             // الاسم عربي
-                            Forms\Components\TextInput::make('name_ar')
-                                ->label('اسم الصف (عربي)')
-                                ->required()
-                                ->maxLength(255),
+                          Forms\Components\TextInput::make('name_ar')
+                            ->label('اسم الفصل (عربي)')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(
+                                ignoreRecord: true, // مهم عند التعديل (edit)
+                                modifyRuleUsing: fn (\Illuminate\Validation\Rules\Unique $rule, callable $get) => 
+                                    $rule->where(fn ($query) => 
+                                        $query->where('school_id', $get('school_id') ?? auth()->user()?->school_id)
+                                    ),
+                            ),
 
                             // الاسم انجليزي
                             Forms\Components\TextInput::make('name_en')
-                                ->label('اسم الصف (إنجليزي)')
+                                ->label('اسم الفصل (إنجليزي)')
                                 ->required()
                                 ->maxLength(255),
 
@@ -131,12 +139,12 @@ public static function form(Form $form): Form
             ->columns([
                 
                 Tables\Columns\TextColumn::make('name_ar')
-                    ->label('اسم الصف (عربي)')
+                    ->label('اسم الفصل (عربي)')
                     ->searchable()
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('name_en')
-                    ->label('اسم الصف (إنجليزي)')
+                    ->label('اسم الفصل (إنجليزي)')
                     ->searchable()
                     ->sortable(),
 

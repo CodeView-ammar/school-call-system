@@ -17,7 +17,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class StudentResource extends Resource
 {
     protected static ?string $model = Student::class;
-
+    
+    protected static ?string $slug = 'students';
+    
     protected static ?string $navigationIcon = 'heroicon-o-users';
     
     protected static ?string $navigationLabel = 'الطلاب';
@@ -55,34 +57,34 @@ public static function form(Form $form): Form
                     ->reactive()
                     ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)),
 
-               Forms\Components\Select::make('branch_id')
-                        ->label('الفرع')
-                        ->options(function (callable $get) {
-                            $schoolId = auth()->user()?->school_id ?? $get('school_id');
-                            if (!$schoolId) return [];
-                            return \App\Models\Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
-                        })
-                        ->required()
-                        ->searchable()
-                        ->preload()
-                        ->reactive()
-                        ->afterStateUpdated(fn ($state, callable $set) => $set('grade_class_id', null)), // ✅ reset لما يغير الفرع
+                Forms\Components\Select::make('branch_id')
+                    ->label('الفرع')
+                    ->options(function (callable $get) {
+                        $schoolId = auth()->user()?->school_id ?? $get('school_id');
+                        if (!$schoolId) return [];
+                        return \App\Models\Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->reactive()
+                    ->afterStateUpdated(fn ($state, callable $set) => $set('grade_class_id', null)),
 
-                    Forms\Components\Select::make('grade_class_id')
-                        ->label('الفصل الدراسي')
-                        ->options(function (callable $get) {
-                            $branchId = $get('branch_id');
-                            if (!$branchId) {
-                                return [];
-                            }
-                            return \App\Models\GradeClass::where('branch_id', $branchId)
-                                ->where('is_active', true)
-                                ->pluck('name_ar', 'id');
-                        })
-                        ->required()
-                        ->searchable()
-                        ->reactive(),
-                    ])
+                Forms\Components\Select::make('grade_class_id')
+                    ->label('الفصل الدراسي')
+                    ->options(function (callable $get) {
+                        $branchId = $get('branch_id');
+                        if (!$branchId) {
+                            return [];
+                        }
+                        return \App\Models\GradeClass::where('branch_id', $branchId)
+                            ->where('is_active', true)
+                            ->pluck('name_ar', 'id');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->reactive(),
+            ])
             ->columns(2),
 
         // بيانات الطالب الشخصية
@@ -114,16 +116,17 @@ public static function form(Form $form): Form
                         ->label('تاريخ الميلاد')
                         ->maxDate(now()),
                 ]),
-            Forms\Components\FileUpload::make('photo')
-                ->label('صورة الطالب')
-                ->image()
-                ->directory('student-photos')
-                ->imageResizeMode('cover')
-                ->imageCropAspectRatio('1:1')
-                ->imageResizeTargetWidth(300)
-                ->imageResizeTargetHeight(300)
-                ->maxSize(2048) // بالحجم بالكيلوبايت (2MB)
-                ->rules(['image', 'mimes:jpeg,jpg,png,webp'])
+                Forms\Components\FileUpload::make('photo')
+                    ->label('صورة الطالب')
+                    ->image()
+                    ->disk('public') // ✅ مهم
+                    ->directory('student-photos')
+                    ->imageResizeMode('cover')
+                    ->imageCropAspectRatio('1:1')
+                    ->imageResizeTargetWidth(300)
+                    ->imageResizeTargetHeight(300)
+                    ->maxSize(2048)
+                    ->rules(['image', 'mimes:jpeg,jpg,png,webp']),
             ]),
 
         // بيانات الصف والفرقة
@@ -190,19 +193,17 @@ public static function form(Form $form): Form
                 Forms\Components\Textarea::make('medical_notes')
                     ->label('ملاحظات طبية')
                     ->rows(2),
-                    // العمود الأيسر: الخريطة
-                    Forms\Components\Section::make('الخريطة')
-                        ->schema([
-                            Forms\Components\ViewField::make('map')
-                                ->label('حدد الموقع على الخريطة')
-                                ->view('filament.custom.map-picker')
-                                ->extraAttributes(['wire:ignore']),
-                        ]),
-
+                // العمود الأيسر: الخريطة
+                Forms\Components\Section::make('الخريطة')
+                    ->schema([
+                        Forms\Components\ViewField::make('map')
+                            ->label('حدد الموقع على الخريطة')
+                            ->view('filament.custom.map-picker')
+                            ->extraAttributes(['wire:ignore']),
+                    ]),
                 Forms\Components\TextInput::make('latitude')
                     ->label('خط العرض')
                     ->disabled(),
-
                 Forms\Components\TextInput::make('longitude')
                     ->label('خط الطول')
                     ->disabled(),
@@ -219,15 +220,15 @@ public static function form(Form $form): Form
             ->schema([
                 Forms\Components\Grid::make(2)->schema([
                     Forms\Components\Select::make('bus_id')
-                            ->label('الحافلة')
-                            ->searchable()
-                            ->reactive()
-                            ->options(function (callable $get) {
-                                $branchId = $get('branch_id');
-                                if (!$branchId) return [];
-                                return \App\Models\Bus::where('branch_id', $branchId)
-                                    ->pluck('number', 'id'); // ✅ هنا المفتاح id والقيمة number
-                            }),
+                        ->label('الحافلة')
+                        ->searchable()
+                        ->reactive()
+                        ->options(function (callable $get) {
+                            $branchId = $get('branch_id');
+                            if (!$branchId) return [];
+                            return \App\Models\Bus::where('branch_id', $branchId)
+                                ->pluck('number', 'id'); // ✅ هنا المفتاح id والقيمة number
+                        }),
 
                     Forms\Components\TextInput::make('pickup_location')
                         ->label('نقطة الاستلام')
@@ -245,6 +246,10 @@ public static function form(Form $form): Form
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('photo')
+                    ->disk('public') // ✅ نفس الديسك
+                    ->label('الصورة')
+                    ->circular(),
                 Tables\Columns\TextColumn::make('name_ar')
                     ->label('اسم الطالب')
                     ->searchable()
@@ -263,9 +268,7 @@ public static function form(Form $form): Form
                     ->label('الفصل الدراسي')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\ImageColumn::make('photo')
-                    ->label('الصورة')
-                    ->circular(),
+
                 Tables\Columns\TextColumn::make('student_number')
                     ->label('رقم الطالب')
                     ->searchable()

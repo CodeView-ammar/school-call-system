@@ -59,7 +59,7 @@ class SchoolResource extends Resource
         return auth()->check() && auth()->user()->user_type === 'super_admin';
     }
 
-    public static function form(Form $form): Form
+   public static function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -68,48 +68,64 @@ class SchoolResource extends Resource
                         Forms\Components\TextInput::make('name_ar')
                             ->label('اسم المدرسة (عربي)')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true),
+
                         Forms\Components\TextInput::make('name_en')
                             ->label('School Name (English)')
                             ->required()
-                            ->maxLength(255),
-                    ]),
-                Forms\Components\Grid::make(2)
-                    ->schema([
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true),
+
                         Forms\Components\TextInput::make('code')
                             ->label('كود المدرسة')
+                            ->maxLength(20)
                             ->required()
                             ->unique(ignoreRecord: true)
-                            ->maxLength(10),
+                            ->default(function () {
+                                $lastSchool = School::orderByDesc('id')->first();
+
+                                if ($lastSchool && preg_match('/school-(\d+)/', $lastSchool->code, $matches)) {
+                                    $nextNumber = intval($matches[1]) + 1;
+                                } else {
+                                    $nextNumber = 1;
+                                }
+
+                                return 'school-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                            }),
+
                         Forms\Components\FileUpload::make('logo')
                             ->label('شعار المدرسة')
                             ->image()
                             ->directory('school-logos'),
                     ]),
+
                 Forms\Components\Grid::make(1)
                     ->schema([
                         Forms\Components\Textarea::make('address_ar')
                             ->label('العنوان (عربي)')
                             ->rows(3),
+
                         Forms\Components\Textarea::make('address_en')
                             ->label('Address (English)')
                             ->rows(3),
                     ]),
+
                 Forms\Components\Grid::make(2)
                     ->schema([
                         Forms\Components\TextInput::make('phone')
                             ->label('الهاتف')
                             ->tel(),
+
                         Forms\Components\TextInput::make('email')
                             ->label('البريد الإلكتروني')
                             ->email(),
                     ]),
+
                 Forms\Components\Toggle::make('is_active')
                     ->label('نشط')
                     ->default(true),
 
-
-                    
                 // إعدادات الفروع
                 Forms\Components\Section::make('إعدادات الفروع')
                     ->schema([
@@ -123,7 +139,7 @@ class SchoolResource extends Resource
                                     ->maxValue(50)
                                     ->required()
                                     ->helperText('العدد الأقصى للفروع المسموح بها لهذه المدرسة'),
-                                    
+
                                 Forms\Components\TextInput::make('current_branches_count')
                                     ->label('عدد الفروع الحالي')
                                     ->numeric()
@@ -131,7 +147,7 @@ class SchoolResource extends Resource
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->helperText('يتم تحديث هذا الرقم تلقائياً'),
-                                    
+
                                 Forms\Components\Toggle::make('allow_unlimited_branches')
                                     ->label('فروع غير محدودة')
                                     ->default(false)
@@ -145,19 +161,19 @@ class SchoolResource extends Resource
                                         }
                                     }),
                             ]),
-                            
+
                         Forms\Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\Toggle::make('branch_settings.allow_branch_management')
                                     ->label('السماح بإدارة الفروع')
                                     ->default(true)
                                     ->helperText('السماح لمديري المدارس بإدارة الفروع'),
-                                    
+
                                 Forms\Components\Toggle::make('branch_settings.require_approval_for_new_branches')
                                     ->label('مطالبة بموافقة لفروع جديدة')
                                     ->default(false)
                                     ->helperText('يتطلب موافقة الإدارة لإنشاء فروع جديدة'),
-                                    
+
                                 Forms\Components\TextInput::make('branch_settings.max_students_per_branch')
                                     ->label('الحد الأقصى للطلاب بكل فرع')
                                     ->numeric()
@@ -165,7 +181,7 @@ class SchoolResource extends Resource
                                     ->minValue(50)
                                     ->maxValue(2000)
                                     ->helperText('العدد الأقصى للطلاب المسموح بهم في كل فرع'),
-                                    
+
                                 Forms\Components\Toggle::make('branch_settings.allow_branch_deletion')
                                     ->label('السماح بحذف الفروع')
                                     ->default(false)
@@ -174,6 +190,7 @@ class SchoolResource extends Resource
                     ])->collapsible(),
             ]);
     }
+
 
     public static function table(Table $table): Table
     {

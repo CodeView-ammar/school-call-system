@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Validation\Rule;
 
 class AcademicBandResource extends Resource
 {
@@ -44,7 +45,7 @@ public static function form(Form $form): Form
     return $form
         ->schema([
             // اختيار المدرسة (للأدمن فقط)
-            $user->hasRole('super_admin') || $user->hasRole('school_admin')
+            $user->hasRole('super_admin') 
                 ? Forms\Components\Select::make('school_id')
                     ->label('المدرسة')
                     ->relationship('school', 'name_ar')
@@ -81,15 +82,30 @@ public static function form(Form $form): Form
                 ->required()
                 ->disabled(fn (callable $get) => $get('school_id') === null),
 
-            Forms\Components\TextInput::make('name_ar')
-                ->label('الاسم العربي')
-                ->required()
-                ->maxLength(255),
+                Forms\Components\TextInput::make('name_ar')
+                    ->label('الاسم العربي')
+                    ->required()
+                    ->maxLength(255)
+                    ->rule(function (callable $get, $context, $record) {
+                        $schoolId = $get('school_id') ?? auth()->user()?->school_id;
 
-            Forms\Components\TextInput::make('name_en')
-                ->label('الاسم الإنجليزي')
-                ->required()
-                ->maxLength(255),
+                        return Rule::unique('academic_bands', 'name_ar')
+                            ->where('school_id', $schoolId)
+                            ->ignore($record?->id); // هنا صار id مباشر مش Closure
+                    }),
+
+                Forms\Components\TextInput::make('name_en')
+                    ->label('الاسم الإنجليزي')
+                    ->required()
+                    ->maxLength(255)
+                    ->rule(function (callable $get, $context, $record) {
+                        $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+
+                        return Rule::unique('academic_bands', 'name_en')
+                            ->where('school_id', $schoolId)
+                            ->ignore($record?->id);
+                    }),
+
 
             Forms\Components\TextInput::make('short_name')
                 ->label('الاسم المختصر')
