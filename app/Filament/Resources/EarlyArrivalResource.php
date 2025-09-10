@@ -167,12 +167,13 @@ class EarlyArrivalResource extends Resource
     }
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', 'pending')->count();
+
+        return static::getModel()::where('status', 'pending')->where("school_id",auth()->user()?->school_id)->count();
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'danger'; // أو 'primary', 'success', 'warning', 'info', 'gray'
+        return 'warning'; // أو 'primary', 'success', 'warning', 'info', 'gray'
     }
 
     public static function getRelations(): array

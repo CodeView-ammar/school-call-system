@@ -8,6 +8,7 @@ class Stop extends Model
     protected $fillable = [
         'school_id',
         'student_id', // إضافة حقل الطالب
+        'branch_id',
         'name',
         'address',
         'latitude',
@@ -21,7 +22,10 @@ class Stop extends Model
     {
         return $this->belongsTo(School::class);
     }
-
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
     // العلاقة مع الطالب
     public function student()
     {

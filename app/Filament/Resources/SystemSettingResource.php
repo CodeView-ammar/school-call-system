@@ -23,6 +23,33 @@ class SystemSettingResource extends Resource
     protected static ?string $pluralModelLabel = 'إعدادات النظام';
     protected static ?string $navigationGroup = 'إدارة النظام';
     protected static bool $shouldRegisterNavigation = true;
+    // إظهار الصفحة للمدير الأساسي فقط
+    public static function canViewAny(): bool
+    {
+        return false;
+    }
+    
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+    
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+    
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+    
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();

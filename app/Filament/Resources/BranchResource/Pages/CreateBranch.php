@@ -37,6 +37,6 @@ class CreateBranch extends CreateRecord
         }
     }
 
-    public $latitude = 24.7136;
-    public $longitude = 46.6753;
+    // public $latitude = 24.7136;
+    // public $longitude = 46.6753;
 }

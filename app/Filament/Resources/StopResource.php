@@ -6,7 +6,9 @@ use App\Filament\Resources\StopResource\Pages;
 use App\Filament\Resources\StopResource\RelationManagers;
 use App\Models\Stop;
 use App\Models\Student;
-use Filament\Forms;
+use App\Models\School;
+use App\Models\Branch;
+use Filament\Forms; 
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -56,42 +58,60 @@ public static function form(Form $form): Form
                     Forms\Components\Section::make('الحقول')
                         ->schema([
                                 Forms\Components\Select::make('school_id')
-                                    ->label('المدرسة')
-                                    ->options(fn () => \App\Models\School::pluck('name_ar', 'id'))
-                                    ->default(auth()->user()?->school_id)
-                                    ->hidden(fn () => auth()->user()?->school_id !== null)
-                                    ->required()
-                                    ->reactive() // اجعلها تفاعلية
+                                ->label('المدرسة')
+                                ->options(fn () => auth()->user()?->is_super_admin
+                                    ? School::pluck('name_ar', 'id')
+                                    : School::where('id', auth()->user()?->school_id)->pluck('name_ar', 'id')
+                                )
+                                ->default(auth()->user()?->school_id)
+                                ->hidden(fn () => auth()->user()?->school_id !== null)
+                                ->required()
+                                ->reactive()
                                 ->afterStateUpdated(function (callable $set, $state) {
-                                    // عند تحديث المدرسة، قم بتحديث قائمة الطلاب
-                                    $set('student_id', null); // إعادة تعيين الطالب عند تغيير المدرسة
+                                    $set('branch_id', null);
+                                    $set('student_id', null);
+                                }),
+
+                            Forms\Components\Select::make('branch_id')
+                                ->label('الفرع')
+                                ->options(function (callable $get) {
+                                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                                    if (!$schoolId) return [];
+                                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                })
+                                ->required()
+                                ->reactive()
+                                ->afterStateUpdated(function (callable $set) {
+                                    $set('student_id', null); // إعادة تعيين الطلاب عند تغيير الفرع
                                 }),
 
                             Forms\Components\Select::make('student_id')
                                 ->label('الطالب')
-                                ->relationship('student', 'name_ar') // تأكد من أن لديك علاقة في نموذج Student
+                                ->options(function (callable $get) {
+                                    $branchId = $get('branch_id');
+                                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+
+                                    if ($branchId) {
+                                        // جلب الطلاب حسب الفرع
+                                        return \App\Models\Student::where('branch_id', $branchId)->pluck('name_ar', 'id');
+                                    } elseif ($schoolId) {
+                                        // إذا لم يتم اختيار الفرع، جلب الطلاب حسب المدرسة
+                                        return \App\Models\Student::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                                    }
+                                    return [];
+                                })
                                 ->searchable()
                                 ->required()
                                 ->reactive()
-                                // ->rules([
-                                //     Rule::unique('stops', 'student_id')
-                                //         ->where(function ($query) {
-                                //             return $query->where('school_id', auth()->user()->school_id);
-                                //         })
-                                //         ->ignore(fn() => $this->getRecord()?->id) // استخدام دالة للحصول على السجل الحالي
-                                // ])
-                                ->options(function (callable $get) {
-                                    $schoolId = $get('school_id');
-                                    return Student::where('school_id', auth()->user()?->school_id)->pluck('name_ar', 'id');
-                                })
                                 ->afterStateUpdated(function (callable $set, $state) {
-                                    $student = Student::find($state);
+                                    $student = \App\Models\Student::find($state);
                                     if ($student) {
                                         $set('name', 'منزل :' . $student->name_ar);
                                     } else {
                                         $set('name', null);
                                     }
                                 }),
+
 
                                 Forms\Components\TextInput::make('name')
                                     ->label('اسم نقطة التوقف')

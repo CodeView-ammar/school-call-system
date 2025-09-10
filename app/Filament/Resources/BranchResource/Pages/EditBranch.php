@@ -20,13 +20,13 @@ class EditBranch extends EditRecord
         ];
     }
     
-    protected function mutateFormDataBeforeFill(array $data): array
-    {
-        $this->latitude = $data['latitude'] ?? 24.7136;
-        $this->longitude = $data['longitude'] ?? 46.6753;
+    // protected function mutateFormDataBeforeFill(array $data): array
+    // {
+    //     $this->latitude = $data['latitude'] ?? 24.7136;
+    //     $this->longitude = $data['longitude'] ?? 46.6753;
         
-        return $data;
-    }
+    //     return $data;
+    // }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {

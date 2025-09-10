@@ -42,15 +42,18 @@ public static function form(Form $form): Form
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->schema([
-                            Forms\Components\Select::make('school_id')
+                            auth()->user()?->school_id === null
+                            ? Forms\Components\Select::make('school_id')
                                 ->label('المدرسة')
-                                ->options(fn () => School::all()->pluck('name_ar', 'id'))
-                                ->default(auth()->user()?->school_id)
-                                ->disabled(fn () => auth()->user()?->school_id !== null)
-                                ->hidden(fn () => auth()->user()?->school_id !== null)
+                                ->relationship('school', 'name_ar')
                                 ->required()
-                                ->reactive()
-                                ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null)),
+                                ->searchable()
+                                ->preload()
+                                ->afterStateUpdated(fn ($state, callable $set) => $set('branch_id', null))
+                            : Forms\Components\Hidden::make('school_id')
+                                ->default(auth()->user()->school_id)
+                                ->dehydrated(true)
+                                ->required(),
 
                             Forms\Components\Select::make('branch_id')
                                 ->label('الفرع')
@@ -68,8 +71,8 @@ public static function form(Form $form): Form
                     Forms\Components\Group::make()
                         ->schema([
                             // ✅ يظهر فقط عند الإنشاء
-                            Forms\Components\CheckboxList::make('days')
-                                ->label('الأيام')
+                            Forms\Components\Select::make('day')
+                                ->label('اليوم')
                                 ->options([
                                     'الأحد' => 'الأحد',
                                     'الاثنين' => 'الاثنين',
@@ -79,9 +82,20 @@ public static function form(Form $form): Form
                                     'الجمعة' => 'الجمعة',
                                     'السبت' => 'السبت',
                                 ])
-                                ->visible(fn ($livewire) => $livewire instanceof \App\Filament\Resources\WeekDayResource\Pages\CreateWeekDay)
-                                ->required(),
+                                ->disabled(fn ($livewire) => $livewire instanceof \App\Filament\Resources\WeekDayResource\Pages\EditWeekDay) // ⛔ يمنع التعديل وقت التحديث
+                                ->required()
+                                ->rule(function (callable $get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                        $exists = \App\Models\WeekDay::where('school_id', $get('school_id'))
+                                            ->where('branch_id', $get('branch_id'))
+                                            ->where('day', $value)
+                                            ->exists();
 
+                                        if ($exists) {
+                                            $fail("اليوم {$value} مسجل بالفعل لهذا الفرع في هذه المدرسة.");
+                                        }
+                                    };
+                                }),
                             // ✅ يظهر فقط عند التعديل
                             Forms\Components\Select::make('day')
                                 ->label('اليوم')

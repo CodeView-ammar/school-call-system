@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\RouteResource\Pages;
 use App\Models\Route;
 use App\Models\School;
+use App\Models\Branch;
 use App\Models\Stop;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -17,7 +18,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\ViewField;
-
+use Illuminate\Database\Eloquent\Builder;
 class RouteResource extends Resource
 {
     protected static ?string $model = Route::class;
@@ -34,7 +35,16 @@ class RouteResource extends Resource
     
     protected static ?int $navigationSort = 1;
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
 
+        if (auth()->user()?->school_id) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
+    }
     public static function form(Form $form): Form
     {
         return $form
@@ -52,11 +62,36 @@ class RouteResource extends Resource
                         'مساء' => 'مسائي',
                     ])
                     ->default('صباحي'),
-                    
-                Select::make('school_id')
-                    ->label('المدرسة')
-                    ->relationship('school', 'name_ar')
-                    ->required(),
+                      auth()->user()?->school_id === null
+                                ? Forms\Components\Select::make('school_id')
+                                    ->label('المدرسة')
+                                    ->relationship('school', 'name_ar')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                : Forms\Components\Hidden::make('school_id')
+                                    ->default(auth()->user()->school_id)
+                                    ->dehydrated(true)
+                                    ->required(),
+
+                    // حقل الفرع
+            Select::make('branch_id')
+                ->label('الفرع')
+                ->options(function (callable $get) {
+                    $schoolId = $get('school_id') ?? auth()->user()?->school_id;
+                    if (!$schoolId) return [];
+                    return Branch::where('school_id', $schoolId)->pluck('name_ar', 'id');
+                })
+                ->default(auth()->user()?->branch_id)
+                ->required()
+                ->reactive()
+                ->searchable()
+                ->afterStateUpdated(function ($state, callable $set) {
+                    $branch = Branch::find($state);
+                    if ($branch) {
+                        $set('school_id', $branch->school_id);
+                    }
+                }),
               Select::make('stops')
                 ->label('التوقفات')
                 ->multiple()
@@ -212,8 +247,11 @@ class RouteResource extends Resource
                 }),
                 Tables\Columns\TextColumn::make('school.name_ar')
                     ->label('المدرسة')
+                    ->searchable()
                     ->sortable()
-                    ->searchable(),
+                    ->visible(fn () => auth()->user()?->school_id === null),
+
+
                      // إضافة عمود نوع الرحلة
             ])
             ->filters([

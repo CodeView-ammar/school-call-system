@@ -4,15 +4,13 @@ namespace App\Filament\Actions;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
 use App\Models\Branch;
 use App\Models\Student;
-use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportStudentsAction extends Action
 {
@@ -38,37 +36,34 @@ class ImportStudentsAction extends Action
                             ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
                             ->maxSize(10240) // 10MB
                             ->directory('imports')
-                            ->preserveFilenames(),
+                            ->visibility('public')
+                            ->downloadable(false),
 
-                        Grid::make(2)->schema([
-                            Select::make('default_branch_id')
-                                ->label('الفرع الافتراضي')
-                                ->required()
-                                ->options(function () {
-                                    $query = Branch::query();
-                                    if (auth()->user()?->school_id) {
-                                        $query->where('school_id', auth()->user()->school_id);
-                                    }
-                                    return $query->pluck('name_ar', 'id');
-                                })
-                                ->searchable(),
+                        Select::make('default_branch_id')
+                            ->label('الفرع الافتراضي')
+                            ->options(function () {
+                                return Branch::where('school_id', auth()->user()?->school_id)
+                                    ->where('is_active', true)
+                                    ->pluck('name_ar', 'id');
+                            })
+                            ->placeholder('اختر الفرع الافتراضي')
+                            ->helperText('سيتم استخدام هذا الفرع للطلاب الذين لا يحتوون على فرع محدد')
+                            ->searchable()
+                            ->preload(),
 
-                            Select::make('import_mode')
-                                ->label('وضع الاستيراد')
-                                ->required()
-                                ->options([
-                                    'create_only' => 'إنشاء جديد فقط',
-                                    'update_existing' => 'تحديث الموجود وإنشاء جديد',
-                                    'replace_all' => 'استبدال الكل (خطر)',
-                                ])
-                                ->default('create_only'),
-                        ]),
+                        Select::make('import_mode')
+                            ->label('وضع الاستيراد')
+                            ->options([
+                                'create_only' => 'إنشاء جديد فقط',
+                                'update_existing' => 'تحديث الموجود أو إنشاء جديد',
+                            ])
+                            ->default('create_only')
+                            ->required()
+                            ->helperText('اختر إنشاء جديد فقط لتجنب تحديث البيانات الموجودة'),
 
-                        Placeholder::make('format_info')
-                            ->label('تنسيق الملف المطلوب')
-                            ->content(function () {
-                                return view('filament.components.import-format-info');
-                            }),
+                        Placeholder::make('required_fields_info')
+                            ->label('الحقول المطلوبة في ملف Excel')
+                            ->content(view('filament.components.import-required-fields')),
                     ])
             ])
             ->action(function (array $data) {
@@ -79,103 +74,70 @@ class ImportStudentsAction extends Action
                         throw new \Exception('الملف غير موجود');
                     }
 
-                    $spreadsheet = IOFactory::load($filePath);
-                    $worksheet = $spreadsheet->getActiveSheet();
-                    $rows = $worksheet->toArray();
-
-                    // إزالة الهيدر
-                    array_shift($rows);
-
-                    $imported = 0;
-                    $updated = 0;
-                    $errors = [];
+                    // استخدام StudentsImport المحسنة
+                    $import = new \App\Imports\StudentsImport(
+                        auth()->user()?->school_id,
+                        $data['default_branch_id'] ?? null,
+                        $data['import_mode']
+                    );
 
                     DB::beginTransaction();
 
-                    foreach ($rows as $index => $row) {
-                        $rowNumber = $index + 2; // +2 لأن الهيدر محذوف والمصفوفة تبدأ من 0
-                        
-                        try {
-                            // التحقق من البيانات المطلوبة
-                            if (empty($row[0]) || empty($row[1])) { // رقم الطالب والاسم
-                                continue;
-                            }
-
-                            $studentData = [
-                                'student_number' => $row[0],
-                                'name_ar' => $row[1],
-                                'name_en' => $row[2] ?? null,
-                                'gender' => strtolower($row[3]) === 'أنثى' || strtolower($row[3]) === 'female' ? 'female' : 'male',
-                                'national_id' => $row[4] ?? null,
-                                'phone' => $row[5] ?? null,
-                                'address_ar' => $row[6] ?? null,
-                                'branch_id' => $data['default_branch_id'],
-                                'school_id' => auth()->user()?->school_id ?? 1,
-                                'is_active' => true,
-                            ];
-
-                            if ($data['import_mode'] === 'update_existing') {
-                                $student = Student::updateOrCreate(
-                                    ['student_number' => $studentData['student_number']],
-                                    $studentData
-                                );
-                                
-                                if ($student->wasRecentlyCreated) {
-                                    $imported++;
-                                } else {
-                                    $updated++;
-                                }
-                            } else {
-                                // التحقق من عدم وجود الطالب
-                                if (Student::where('student_number', $studentData['student_number'])->exists()) {
-                                    $errors[] = "الصف {$rowNumber}: رقم الطالب {$studentData['student_number']} موجود مسبقاً";
-                                    continue;
-                                }
-
-                                Student::create($studentData);
-                                $imported++;
-                            }
-                        } catch (\Exception $e) {
-                            $errors[] = "الصف {$rowNumber}: " . $e->getMessage();
-                        }
-                    }
-
+                    // تنفيذ الاستيراد
+                    \Maatwebsite\Excel\Facades\Excel::import($import, $filePath);
+                    
                     DB::commit();
 
                     // حذف الملف المؤقت
-                    unlink($filePath);
-
-                    $message = "تم استيراد {$imported} طالب جديد";
-                    if ($updated > 0) {
-                        $message .= " وتحديث {$updated} طالب";
+                    if (file_exists($filePath)) {
+                        unlink($filePath);
                     }
 
+                    // عد النتائج من قاعدة البيانات
+                    $totalStudents = Student::where('school_id', auth()->user()?->school_id)->count();
+                    
+                    $message = "تم إنجاز عملية الاستيراد بنجاح\n";
+                    $message .= "إجمالي عدد الطلاب في النظام: {$totalStudents}";
+                    
+                    $errors = $import->getErrors();
+                    
                     if (!empty($errors)) {
-                        $message .= "\n\nأخطاء:\n" . implode("\n", array_slice($errors, 0, 5));
+                        $message .= "\n\nملاحظات ومشاكل:\n" . implode("\n", array_slice($errors, 0, 5));
                         if (count($errors) > 5) {
-                            $message .= "\n... و " . (count($errors) - 5) . " أخطاء أخرى";
+                            $message .= "\n... و " . (count($errors) - 5) . " ملاحظة أخرى";
                         }
+                        
+                        Notification::make()
+                            ->title('تم الاستيراد مع بعض الملاحظات')
+                            ->body($message)
+                            ->warning()
+                            ->persistent()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('نجح الاستيراد')
+                            ->body($message)
+                            ->success()
+                            ->send();
                     }
-
-                    Notification::make()
-                        ->title($imported > 0 || $updated > 0 ? 'تم الاستيراد بنجاح' : 'لم يتم استيراد أي بيانات')
-                        ->body($message)
-                        ->color($imported > 0 || $updated > 0 ? 'success' : 'warning')
-                        ->duration(10000)
-                        ->send();
 
                 } catch (\Exception $e) {
                     DB::rollBack();
-                    
+
+                    // حذف الملف المؤقت في حالة الخطأ أيضاً
+                    if (isset($filePath) && file_exists($filePath)) {
+                        unlink($filePath);
+                    }
+
                     Notification::make()
                         ->title('خطأ في الاستيراد')
                         ->body('حدث خطأ أثناء استيراد البيانات: ' . $e->getMessage())
                         ->danger()
+                        ->persistent()
                         ->send();
+
+                    throw $e;
                 }
-            })
-            ->modalWidth('lg')
-            ->modalSubmitActionLabel('بدء الاستيراد')
-            ->modalCancelActionLabel('إلغاء');
+            });
     }
 }
