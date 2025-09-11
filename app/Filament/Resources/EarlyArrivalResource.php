@@ -14,10 +14,11 @@ class EarlyArrivalResource extends Resource
 {
     protected static ?string $model = EarlyArrival::class;
     protected static ?string $navigationIcon = 'heroicon-o-clock';
-    protected static ?string $navigationGroup = 'النداء المبكر';
     protected static ?string $navigationLabel = 'النداء المبكر';
     protected static ?string $modelLabel = 'النداء المبكر';
     protected static ?string $pluralModelLabel = 'النداءات المبكرة';
+    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = 'ندائات';
     public static function canCreate(): bool
     {
         return auth()->check() && auth()->user()->user_type === 'super_admin';

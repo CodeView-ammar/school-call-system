@@ -21,7 +21,8 @@ class WeekDayResource extends Resource
     protected static ?string $navigationLabel = 'الاستعداد والانصراف';
     protected static ?string $modelLabel = 'الاستعداد والانصراف';
     protected static ?string $pluralModelLabel = 'الاستعداد والانصراف';
-    protected static ?string $navigationGroup = 'الاستعداد والانصراف';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'إدارة نظام المدرسة';
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();

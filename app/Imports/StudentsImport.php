@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Imports;
 
 use App\Models\Student;
@@ -7,394 +8,471 @@ use App\Models\AcademicBand;
 use App\Models\GradeClass;
 use App\Models\Bus;
 use App\Models\Guardian;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Concerns\ToModel;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithBatchInserts;
-use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\WithStartRow;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
-class StudentsImport implements ToModel, WithHeadingRow, WithBatchInserts, WithChunkReading, WithValidation, WithStartRow
+class StudentsImport implements ToCollection, WithHeadingRow, WithValidation
 {
-    protected $schoolId;
-    protected $defaultBranchId;
-    protected $importMode;
-    protected $errors = [];
-    protected $requiredFields = [];
-    
-    public function __construct($schoolId = null, $defaultBranchId = null, $importMode = 'create_only')
+    private $schoolId;
+    private $defaultBranchId;
+    private $importMode;
+    private $errors = [];
+    private $successCount = 0;
+    private $updateCount = 0;
+    private $skipCount = 0;
+
+    public function __construct($schoolId, $defaultBranchId = null, $importMode = 'create_only')
     {
-        $this->schoolId = $schoolId ?? auth()->user()?->school_id;
+        $this->schoolId = $schoolId;
         $this->defaultBranchId = $defaultBranchId;
         $this->importMode = $importMode;
-        $this->setRequiredFields();
     }
 
-    public function startRow(): int
+    public function collection(Collection $rows)
     {
-        return 2;
-    }
-    
-    /**
-     * تحديد الحقول المطلوبة
-     */
-    private function setRequiredFields()
-    {
-        $this->requiredFields = [
-            // الحقول الأساسية المطلوبة
-            'student_code' => 'كود الطالب (مطلوب)',
-            'student_name_ar' => 'اسم الطالب بالعربية (مطلوب)',
-            'branch_name' => 'اسم الفرع (مطلوب)',
-            'academic_band_name' => 'اسم الفرقة الأكاديمية (مطلوب)',
-            'grade_class_name' => 'اسم الفصل الدراسي (مطلوب)',
-            
-            // الحقول الاختيارية
-            'student_number' => 'الرقم الأكاديمي (اختياري)',
-            'student_name_en' => 'اسم الطالب بالإنجليزية (اختياري)',
-            'national_id' => 'رقم الهوية (اختياري)',
-            'date_of_birth' => 'تاريخ الميلاد (اختياري) - تنسيق: YYYY-MM-DD',
-            'gender' => 'الجنس (اختياري) - ذكر/أنثى',
-            'nationality' => 'الجنسية (اختياري)',
-            'address_ar' => 'العنوان بالعربية (اختياري)',
-            'address_en' => 'العنوان بالإنجليزية (اختياري)',
-            'latitude' => 'خط العرض (اختياري)',
-            'longitude' => 'خط الطول (اختياري)',
-            'medical_notes' => 'الملاحظات الطبية (اختياري)',
-            'emergency_contact' => 'جهة اتصال الطوارئ (اختياري)',
-            'pickup_location' => 'مكان الاستقلال (اختياري)',
-            'bus_code' => 'كود الحافلة (اختياري)',
-            'is_active' => 'نشط (اختياري) - نعم/لا',
-            
-            // أولياء الأمور
-            'guardian_1_name' => 'اسم ولي الأمر الأول (اختياري)',
-            'guardian_1_phone' => 'هاتف ولي الأمر الأول (اختياري)',
-            'guardian_1_relationship' => 'علاقة ولي الأمر الأول (اختياري)',
-            'guardian_2_name' => 'اسم ولي الأمر الثاني (اختياري)',
-            'guardian_2_phone' => 'هاتف ولي الأمر الثاني (اختياري)',
-            'guardian_2_relationship' => 'علاقة ولي الأمر الثاني (اختياري)',
-        ];
-    }
-
-    /**
-     * الحصول على الحقول المطلوبة للعرض
-     */
-    public function getRequiredFields()
-    {
-        return $this->requiredFields;
-    }
-    
-    public function model(array $row)
-    {
+        DB::beginTransaction();
+        
         try {
-            // تنظيف البيانات
-            $row = array_map(function($value) {
-                return is_string($value) ? trim($value) : $value;
-            }, $row);
-            
-            // التحقق من البيانات الأساسية المطلوبة
-            $validationResult = $this->validateRequiredFields($row);
-            if (!$validationResult['valid']) {
-                $this->errors[] = $validationResult['message'];
-                return null;
-            }
-            
-            // البحث عن أو إنشاء الطالب
-            $studentData = $this->prepareStudentData($row);
-            
-            if ($this->importMode === 'update_existing') {
-                $student = Student::updateOrCreate(
-                    ['code' => $studentData['code'], 'school_id' => $this->schoolId],
-                    $studentData
-                );
-            } else {
-                // التحقق من عدم وجود الطالب
-                if (Student::where('code', $studentData['code'])
-                    ->where('school_id', $this->schoolId)->exists()) {
-                    $this->errors[] = 'الطالب بكود ' . $studentData['code'] . ' موجود بالفعل';
-                    return null;
-                }
+            foreach ($rows as $index => $row) {
+                $rowNumber = $index + 2; // +2 because index starts at 0 and we have header row
                 
-                $student = Student::create($studentData);
+                try {
+                    $this->processRow($row->toArray(), $rowNumber);
+                } catch (\Exception $e) {
+                    $this->errors[] = "صف {$rowNumber}: {$e->getMessage()}";
+                    Log::error("Error processing row {$rowNumber}: " . $e->getMessage(), [
+                        'row_data' => $row->toArray()
+                    ]);
+                }
             }
             
-            // إضافة أولياء الأمور
-            $this->handleGuardians($student, $row);
-            
-            return $student;
+            DB::commit();
             
         } catch (\Exception $e) {
-            $this->errors[] = 'خطأ في استيراد البيانات: ' . $e->getMessage();
-            Log::error('Import Error: ' . $e->getMessage() . ' Row: ' . json_encode($row));
-            return null;
+            DB::rollBack();
+            throw $e;
         }
     }
 
-    /**
-     * التحقق من الحقول المطلوبة
-     */
-    private function validateRequiredFields(array $row)
+    private function processRow(array $row, int $rowNumber)
     {
-        $missingFields = [];
-        
-        // التحقق من الحقول الأساسية المطلوبة
-        if (empty($row['student_code'])) {
-            $missingFields[] = 'كود الطالب';
-        }
-        
-        if (empty($row['student_name_ar'])) {
-            $missingFields[] = 'اسم الطالب بالعربية';
-        }
-        
-        if (empty($row['branch_name'])) {
-            $missingFields[] = 'اسم الفرع';
-        }
-        
-        if (empty($row['academic_band_name'])) {
-            $missingFields[] = 'اسم الفرقة الأكاديمية';
-        }
-        
-        if (empty($row['grade_class_name'])) {
-            $missingFields[] = 'اسم الفصل الدراسي';
-        }
-        
-        if (!empty($missingFields)) {
-            return [
-                'valid' => false,
-                'message' => 'الحقول التالية مطلوبة ومفقودة: ' . implode(', ', $missingFields)
-            ];
-        }
-        
-        return ['valid' => true];
-    }
-    
-    private function prepareStudentData(array $row)
-    {
-        
-        // البحث عن الفرع والتأكد من وجوده
-        $branchId = $this->findBranch($row['branch_name']);
-        if (!$branchId) {
-            throw new \Exception('الفرع المحدد غير موجود: ' . $row['branch_name']);
-        }
-        
-        // البحث عن الفرقة الأكاديمية والتأكد من وجودها
-        $academicBandId = $this->findAcademicBand($row['academic_band_name']);
-        if (!$academicBandId) {
-            throw new \Exception('الفرقة الأكاديمية المحددة غير موجودة: ' . $row['academic_band_name']);
-        }
-        
-        // البحث عن الفصل والتأكد من وجوده
-        $gradeClassId = $this->findGradeClass($row['grade_class_name'], $branchId, $academicBandId);
-        if (!$gradeClassId) {
-            throw new \Exception('الفصل الدراسي المحدد غير موجود: ' . $row['grade_class_name']);
-        }
-        
-        // البحث عن الحافلة (اختياري)
-        $busId = null;
-        if (!empty($row['bus_code'])) {
-            $busId = $this->findBus($row['bus_code']);
-            if (!$busId) {
-                $this->errors[] = 'تحذير: كود الحافلة غير موجود: ' . $row['bus_code'];
-            }
-        }
-        
-        // تحويل الجنس
-        $gender = $this->normalizeGender($row['gender'] ?? 'ذكر');
-        
-        // تحويل حالة النشاط
-        $isActive = $this->normalizeBoolean($row['is_active'] ?? 'نعم');
-        
-        return [
-            'school_id' => $this->schoolId,
-            'branch_id' => $branchId,
-            'academic_band_id' => $academicBandId,
-            'grade_class_id' => $gradeClassId,
-            'bus_id' => $busId,
-            'code' => $row['student_code'],
-            'student_number' => $row['student_number'] ?? null,
-            'name_ar' => $row['student_name_ar'],
-            'name_en' => $row['student_name_en'] ?? null,
-            'national_id' => $row['national_id'] ?? null,
-            'date_of_birth' => $this->parseDate($row['date_of_birth'] ?? null),
-            'gender' => $gender,
-            'nationality' => $row['nationality'] ?? 'السعودية',
-            'address_ar' => $row['address_ar'] ?? null,
-            'address_en' => $row['address_en'] ?? null,
-            'latitude' => is_numeric($row['latitude'] ?? null) ? (float) $row['latitude'] : null,
-            'longitude' => is_numeric($row['longitude'] ?? null) ? (float) $row['longitude'] : null,
-            'medical_notes' => $row['medical_notes'] ?? null,
-            'emergency_contact' => $row['emergency_contact'] ?? null,
-            'pickup_location' => $row['pickup_location'] ?? null,
-            'is_active' => $isActive,
-        ];
-    }
-    
-    private function handleGuardians(Student $student, array $row)
-    {
-        // ولي الأمر الأول
-        if (!empty($row['guardian_1_name'])) {
-            $guardian1 = $this->createOrUpdateGuardian([
-                'name_ar' => $row['guardian_1_name'],
-                'phone' => $row['guardian_1_phone'] ?? null,
-                'relationship' => $row['guardian_1_relationship'] ?? 'أب',
-                'school_id' => $this->schoolId,
-            ]);
-            
-            if ($guardian1) {
-                $student->guardians()->syncWithoutDetaching([
-                    $guardian1->id => ['is_primary' => true]
-                ]);
-            }
-        }
-        
-        // ولي الأمر الثاني
-        if (!empty($row['guardian_2_name'])) {
-            $guardian2 = $this->createOrUpdateGuardian([
-                'name_ar' => $row['guardian_2_name'],
-                'phone' => $row['guardian_2_phone'] ?? null,
-                'relationship' => $row['guardian_2_relationship'] ?? 'أم',
-                'school_id' => $this->schoolId,
-            ]);
-            
-            if ($guardian2) {
-                $student->guardians()->syncWithoutDetaching([
-                    $guardian2->id => ['is_primary' => false]
-                ]);
-            }
-        }
-    }
-    
-    private function createOrUpdateGuardian(array $guardianData)
-    {
-        if (empty($guardianData['name_ar'])) {
-            return null;
-        }
-        
-        return Guardian::updateOrCreate(
-            [
-                'name_ar' => $guardianData['name_ar'],
-                'school_id' => $guardianData['school_id']
-            ],
-            $guardianData
-        );
-    }
-    
-    private function findBranch($branchName)
-    {
-        if (empty($branchName)) return $this->defaultBranchId;
-        
-        return Branch::where('school_id', $this->schoolId)
-            ->where(function ($query) use ($branchName) {
-                $query->where('name_ar', 'LIKE', '%' . $branchName . '%')
-                      ->orWhere('name_en', 'LIKE', '%' . $branchName . '%')
-                      ->orWhere('code', $branchName);
-            })
-            ->value('id');
-    }
-    
-    private function findAcademicBand($bandName)
-    {
-        if (empty($bandName)) return null;
-        
-        return AcademicBand::where('school_id', $this->schoolId)
-            ->where(function ($query) use ($bandName) {
-                $query->where('name_ar', 'LIKE', '%' . $bandName . '%')
-                      ->orWhere('name_en', 'LIKE', '%' . $bandName . '%');
-            })
-            ->value('id');
-    }
-    
-    private function findGradeClass($className, $branchId = null, $academicBandId = null)
-    {
-        if (empty($className)) return null;
-        
-        $query = GradeClass::where('school_id', $this->schoolId);
-        
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
-        }
-        
-        if ($academicBandId) {
-            $query->where('academic_band_id', $academicBandId);
-        }
-        
-        return $query->where(function ($q) use ($className) {
-                $q->where('name_ar', 'LIKE', '%' . $className . '%')
-                  ->orWhere('name_en', 'LIKE', '%' . $className . '%')
-                  ->orWhere('code', $className);
-            })
-            ->value('id');
-    }
-    
-    private function findBus($busCode)
-    {
-        if (empty($busCode)) return null;
-        
-        return Bus::whereHas('branch', function ($query) {
-                $query->where('school_id', $this->schoolId);
-            })
-            ->where('code', $busCode)
-            ->value('id');
-    }
-    
-    private function normalizeGender($gender)
-    {
-        $gender = strtolower(trim($gender));
-        
-        if (in_array($gender, ['أنثى', 'female', 'f', 'انثى', 'انثي'])) {
-            return 'female';
-        }
-        
-        return 'male'; // Default to male
-    }
-    
-    private function normalizeBoolean($value)
-    {
-        $value = strtolower(trim($value));
-        
-        return in_array($value, ['نعم', 'yes', 'true', '1', 'active']);
-    }
-    
-    private function parseDate($date)
-    {
-        if (empty($date)) return null;
-        
         try {
-            return \Carbon\Carbon::parse($date)->format('Y-m-d');
+            // تنظيف البيانات وإزالة المفاتيح الفارغة
+            $originalRow = $row;
+            $row = array_filter($row, function($value, $key) {
+                return !is_null($value) && $value !== '' && !is_null($key) && $key !== '';
+            }, ARRAY_FILTER_USE_BOTH);
+
+            // التحقق من وجود البيانات الأساسية
+            $studentCode = $this->getStudentCode($row);
+            $studentName = $this->getStudentName($row);
+
+            if (empty($studentCode)) {
+                throw new \Exception("كود الطالب مطلوب");
+            }
+
+            if (empty($studentName)) {
+                throw new \Exception("اسم الطالب مطلوب");
+            }
+
+            // التحقق من وجود الفرع
+            $branchId = $this->getBranchId($row) ?? $this->defaultBranchId;
+            if (!$branchId) {
+                throw new \Exception("الفرع مطلوب - يرجى تحديد فرع افتراضي أو إضافة فرع في البيانات");
+            }
+
+            // البحث عن الطالب الموجود
+            $existingStudent = Student::where('school_id', $this->schoolId)
+                ->where('code', $studentCode)
+                ->first();
+
+            // إذا كان الطالب موجود ووضع الاستيراد "إنشاء جديد فقط"
+            if ($existingStudent && $this->importMode === 'create_only') {
+                $this->skipCount++;
+                $this->errors[] = "صف {$rowNumber}: الطالب {$studentName} (كود: {$studentCode}) موجود مسبقاً";
+                return;
+            }
+
+            // تحضير بيانات الطالب
+            $studentData = $this->prepareStudentData($row, $rowNumber);
+
+            if ($existingStudent && $this->importMode === 'update_existing') {
+                // تحديث الطالب الموجود
+                $existingStudent->update($studentData);
+                $student = $existingStudent;
+                $this->updateCount++;
+                Log::info("Updated student", ['student_id' => $student->id, 'code' => $studentCode]);
+            } else {
+                // إنشاء طالب جديد
+                $student = Student::create($studentData);
+                $this->successCount++;
+                Log::info("Created student", ['student_id' => $student->id, 'code' => $studentCode]);
+            }
+
+            // معالجة بيانات أولياء الأمور
+            $this->processGuardians($student, $row, $rowNumber);
+
         } catch (\Exception $e) {
-            $this->errors[] = 'تنسيق التاريخ غير صحيح: ' . $date;
-            return null;
+            Log::error("Error processing row {$rowNumber}: " . $e->getMessage(), [
+                'row_data' => $originalRow ?? $row,
+                'exception' => $e->getMessage()
+            ]);
+            throw $e;
         }
     }
-    
-    public function batchSize(): int
+
+    private function getStudentCode(array $row): ?string
     {
-        return 100;
+        // البحث في جميع المفاتيح الممكنة لكود الطالب
+        $codePossibleKeys = [
+            'code', 'student_code', 'كود_الطالب', 'الكود', 'كود', 'رقم_الطالب', 'student_number',
+            'student_id', 'id', 'معرف_الطالب', 'رقم', 'Student Code', 'Code', 'Student ID'
+        ];
+        
+        foreach ($codePossibleKeys as $key) {
+            if (isset($row[$key]) && !empty(trim($row[$key]))) {
+                return trim($row[$key]);
+            }
+        }
+        
+        // البحث بالمفاتيح التي تحتوي على كلمات مشابهة
+        foreach ($row as $key => $value) {
+            $keyLower = strtolower(trim($key));
+            if (!empty(trim($value)) && (
+                strpos($keyLower, 'code') !== false ||
+                strpos($keyLower, 'كود') !== false ||
+                strpos($keyLower, 'رقم') !== false ||
+                strpos($keyLower, 'id') !== false
+            )) {
+                return trim($value);
+            }
+        }
+        
+        return null;
     }
-    
-    public function chunkSize(): int
+
+    private function getStudentName(array $row): ?string
     {
-        return 50;
+        // البحث في جميع المفاتيح الممكنة لاسم الطالب
+        $namePossibleKeys = [
+            'name_ar', 'الاسم_العربي', 'name_en', 'الاسم_الانجليزي', 'اسم_الطالب', 'student_name',
+            'name', 'اسم', 'الاسم', 'Student Name', 'Name', 'الطالب', 'طالب', 'full_name',
+            'student_name_ar', 'student_name_en', 'اسم_كامل'
+        ];
+        
+        foreach ($namePossibleKeys as $key) {
+            if (isset($row[$key]) && !empty(trim($row[$key]))) {
+                return trim($row[$key]);
+            }
+        }
+        
+        // البحث بالمفاتيح التي تحتوي على كلمات مشابهة
+        foreach ($row as $key => $value) {
+            $keyLower = strtolower(trim($key));
+            if (!empty(trim($value)) && (
+                strpos($keyLower, 'name') !== false ||
+                strpos($keyLower, 'اسم') !== false ||
+                strpos($keyLower, 'طالب') !== false ||
+                strpos($keyLower, 'student') !== false
+            )) {
+                return trim($value);
+            }
+        }
+        
+        return null;
     }
-    
+
+    private function prepareStudentData(array $row, int $rowNumber): array
+    {
+        // الحقول الأساسية المطلوبة
+        $studentCode = $this->getStudentCode($row);
+        $studentNameAr = $this->getStudentName($row);
+        
+        $data = [
+            'school_id' => $this->schoolId,
+            'code' => $studentCode,
+            'is_active' => true, // قيمة افتراضية
+        ];
+
+        // اسم الطالب (مطلوب - إما عربي أو إنجليزي)
+        if (!empty($studentNameAr)) {
+            $data['name_ar'] = $studentNameAr;
+        }
+        
+        // الاسم الإنجليزي إذا كان متوفراً
+        $nameEn = $this->getFieldValue($row, ['name_en', 'الاسم_الانجليزي', 'student_name_en']);
+        if (!empty($nameEn)) {
+            $data['name_en'] = $nameEn;
+        }
+
+        // الحقول الاختيارية - فقط إذا كانت موجودة ولها قيم
+        $optionalFields = [
+            'student_number' => ['student_number', 'رقم_الطالب', 'الرقم_الاكاديمي'],
+            'national_id' => ['national_id', 'الرقم_الوطني', 'رقم_الهوية'],
+            'date_of_birth' => ['date_of_birth', 'تاريخ_الميلاد'],
+            'gender' => ['gender', 'الجنس'],
+            'nationality' => ['nationality', 'الجنسية'],
+            'address_ar' => ['address_ar', 'العنوان_العربي', 'العنوان'],
+            'address_en' => ['address_en', 'العنوان_الانجليزي'],
+            'latitude' => ['latitude', 'خط_العرض'],
+            'longitude' => ['longitude', 'خط_الطول'],
+            'medical_notes' => ['medical_notes', 'الملاحظات_الطبية'],
+            'emergency_contact' => ['emergency_contact', 'جهة_الاتصال_الطارئ'],
+            'pickup_location' => ['pickup_location', 'مكان_الاستقلال'],
+        ];
+
+        foreach ($optionalFields as $field => $keys) {
+            $value = $this->getFieldValue($row, $keys);
+            if (!empty($value)) {
+                // معالجة خاصة لتاريخ الميلاد
+                if ($field === 'date_of_birth') {
+                    try {
+                        $data[$field] = date('Y-m-d', strtotime($value));
+                    } catch (\Exception $e) {
+                        // تجاهل التاريخ غير الصحيح
+                        continue;
+                    }
+                } else {
+                    $data[$field] = $value;
+                }
+            }
+        }
+
+        // معالجة الفرع (مطلوب)
+        $branchId = $this->getBranchId($row) ?? $this->defaultBranchId;
+        if ($branchId) {
+            $data['branch_id'] = $branchId;
+        }
+
+        // معالجة المرحلة الأكاديمية (اختياري)
+        $academicBandId = $this->getAcademicBandId($row);
+        if ($academicBandId) {
+            $data['academic_band_id'] = $academicBandId;
+        }
+
+        // معالجة الصف (اختياري)
+        $gradeClassId = $this->getGradeClassId($row);
+        if ($gradeClassId) {
+            $data['grade_class_id'] = $gradeClassId;
+        }
+
+        // معالجة الحافلة (اختياري)
+        $busId = $this->getBusId($row);
+        if ($busId) {
+            $data['bus_id'] = $busId;
+        }
+
+        // معالجة حالة النشاط
+        $isActive = $this->getFieldValue($row, ['is_active', 'نشط', 'active','نعم','yes']);
+        if (!empty($isActive)) {
+            $data['is_active'] = filter_var($isActive, FILTER_VALIDATE_BOOLEAN);
+        }
+        $data['is_active'] =True;
+        return $data;
+    }
+
+    /**
+     * استخراج قيمة حقل من مفاتيح متعددة
+     */
+    private function getFieldValue(array $row, array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            if (isset($row[$key]) && !empty(trim($row[$key]))) {
+                return trim($row[$key]);
+            }
+        }
+        return null;
+    }
+
+    private function getBranchId(array $row): ?int
+    {
+        $branchName = $row['branch_name'] ?? $row['اسم_الفرع'] ?? null;
+        $branchId = $row['branch_id'] ?? $row['معرف_الفرع'] ?? null;
+
+        if ($branchId) {
+            $branch = Branch::where('id', $branchId)
+                ->where('school_id', $this->schoolId)
+                ->first();
+            if ($branch) return $branch->id;
+        }
+
+        if ($branchName) {
+            $branch = Branch::where('school_id', $this->schoolId)
+                ->where(function($query) use ($branchName) {
+                    $query->where('name_ar', $branchName)
+                          ->orWhere('name_en', $branchName);
+                })
+                ->first();
+            if ($branch) return $branch->id;
+        }
+
+        return null;
+    }
+
+    private function getAcademicBandId(array $row): ?int
+    {
+        $bandName = $row['academic_band_name'] ?? $row['اسم_المرحلة'] ?? null;
+        $bandId = $row['academic_band_id'] ?? $row['معرف_المرحلة'] ?? null;
+
+        if ($bandId) {
+            $band = AcademicBand::where('id', $bandId)
+                ->where('school_id', $this->schoolId)
+                ->first();
+            if ($band) return $band->id;
+        }
+
+        if ($bandName) {
+            $band = AcademicBand::where('school_id', $this->schoolId)
+                ->where(function($query) use ($bandName) {
+                    $query->where('name_ar', $bandName)
+                          ->orWhere('name_en', $bandName);
+                })
+                ->first();
+            if ($band) return $band->id;
+        }
+
+        return null;
+    }
+
+    private function getGradeClassId(array $row): ?int
+    {
+        $className = $row['grade_class_name'] ?? $row['اسم_الصف'] ?? null;
+        $classId = $row['grade_class_id'] ?? $row['معرف_الصف'] ?? null;
+
+        if ($classId) {
+            $class = GradeClass::where('id', $classId)
+                ->where('school_id', $this->schoolId)
+                ->first();
+            if ($class) return $class->id;
+        }
+
+        if ($className) {
+            $class = GradeClass::where('school_id', $this->schoolId)
+                ->where(function($query) use ($className) {
+                    $query->where('name_ar', $className)
+                          ->orWhere('name_en', $className);
+                })
+                ->first();
+            if ($class) return $class->id;
+        }
+
+        return null;
+    }
+
+    private function getBusId(array $row): ?int
+    {
+        $busCode = $row['bus_code'] ?? $row['كود_الحافلة'] ?? null;
+        $busId = $row['bus_id'] ?? $row['معرف_الحافلة'] ?? null;
+
+        if ($busId) {
+            $bus = Bus::where('id', $busId)
+                ->where('school_id', $this->schoolId)
+                ->first();
+            if ($bus) return $bus->id;
+        }
+
+        if ($busCode) {
+            $bus = Bus::where('school_id', $this->schoolId)
+                ->where('code', $busCode)
+                ->first();
+            if ($bus) return $bus->id;
+        }
+
+        return null;
+    }
+
+    private function processGuardians(Student $student, array $row, int $rowNumber)
+    {
+        // معالجة ولي الأمر الأول
+        $this->processGuardian($student, $row, 1, true);
+        
+        // معالجة ولي الأمر الثاني
+        $this->processGuardian($student, $row, 2, false);
+    }
+
+    private function processGuardian(Student $student, array $row, int $guardianNumber, bool $isPrimary)
+    {
+        $prefix = $guardianNumber === 1 ? '' : '2_';
+        
+        $guardianData = [
+            'name_ar' => $row[$prefix . 'guardian_name_ar'] ?? $row[$prefix . 'اسم_ولي_الامر_عربي'] ?? null,
+            'name_en' => $row[$prefix . 'guardian_name_en'] ?? $row[$prefix . 'اسم_ولي_الامر_انجليزي'] ?? null,
+            'phone' => $row[$prefix . 'guardian_phone'] ?? $row[$prefix . 'هاتف_ولي_الامر'] ?? null,
+            'email' => $row[$prefix . 'guardian_email'] ?? $row[$prefix . 'ايميل_ولي_الامر'] ?? null,
+            'national_id' => $row[$prefix . 'guardian_national_id'] ?? $row[$prefix . 'رقم_هوية_ولي_الامر'] ?? null,
+            'relationship' => $row[$prefix . 'guardian_relationship'] ?? $row[$prefix . 'صلة_القرابة'] ?? null,
+        ];
+
+        // إزالة القيم الفارغة
+        $guardianData = array_filter($guardianData, function($value) {
+            return !is_null($value) && $value !== '';
+        });
+
+        if (empty($guardianData['name_ar']) && empty($guardianData['name_en'])) {
+            return; // لا توجد بيانات ولي أمر
+        }
+
+        $guardianData['school_id'] = $this->schoolId;
+
+        // البحث عن ولي الأمر الموجود
+        $guardian = null;
+        
+        if (!empty($guardianData['phone'])) {
+            $guardian = Guardian::where('school_id', $this->schoolId)
+                ->where('phone', $guardianData['phone'])
+                ->first();
+        }
+        
+        if (!$guardian && !empty($guardianData['national_id'])) {
+            $guardian = Guardian::where('school_id', $this->schoolId)
+                ->where('national_id', $guardianData['national_id'])
+                ->first();
+        }
+
+        if ($guardian) {
+            // تحديث بيانات ولي الأمر الموجود
+            $guardian->update($guardianData);
+        } else {
+            // إنشاء ولي أمر جديد
+            $guardian = Guardian::create($guardianData);
+        }
+
+        // ربط ولي الأمر بالطالب
+        if (!$student->guardians()->where('guardian_id', $guardian->id)->exists()) {
+            $student->guardians()->attach($guardian->id, [
+                'is_primary' => $isPrimary && $guardianNumber === 1
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'student_code' => 'required|string|max:50',
-            'student_name_ar' => 'required|string|max:255',
-            'branch_name' => 'required|string|max:255',
-            'academic_band_name' => 'required|string|max:255',
-            'grade_class_name' => 'required|string|max:255',
-            'student_number' => 'nullable|string|max:50',
-            'national_id' => 'nullable|string|max:20',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:ذكر,أنثى,male,female',
+            // لا نضع قواعد صارمة هنا لأننا نتعامل مع أشكال مختلفة من البيانات
         ];
     }
-    
-    public function getErrors()
+
+    public function getErrors(): array
     {
         return $this->errors;
+    }
+
+    public function getSuccessCount(): int
+    {
+        return $this->successCount;
+    }
+
+    public function getUpdateCount(): int
+    {
+        return $this->updateCount;
+    }
+
+    public function getSkipCount(): int
+    {
+        return $this->skipCount;
     }
 }

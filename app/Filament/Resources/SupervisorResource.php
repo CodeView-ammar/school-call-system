@@ -38,9 +38,9 @@ class SupervisorResource extends Resource
     
     protected static ?string $pluralModelLabel = 'المساعدين';
 
-    protected static ?string $navigationGroup = 'إدارة الطلاب';
+    protected static ?string $navigationGroup = 'إدارة المستخدمين';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
     
 
     public static function getEloquentQuery(): Builder

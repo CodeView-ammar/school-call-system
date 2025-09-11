@@ -9,6 +9,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
+use App\Imports\StudentsImport;
 use App\Models\Branch;
 use App\Models\Student;
 
@@ -39,17 +40,6 @@ class ImportStudentsAction extends Action
                             ->visibility('public')
                             ->downloadable(false),
 
-                        Select::make('default_branch_id')
-                            ->label('الفرع الافتراضي')
-                            ->options(function () {
-                                return Branch::where('school_id', auth()->user()?->school_id)
-                                    ->where('is_active', true)
-                                    ->pluck('name_ar', 'id');
-                            })
-                            ->placeholder('اختر الفرع الافتراضي')
-                            ->helperText('سيتم استخدام هذا الفرع للطلاب الذين لا يحتوون على فرع محدد')
-                            ->searchable()
-                            ->preload(),
 
                         Select::make('import_mode')
                             ->label('وضع الاستيراد')
@@ -75,7 +65,7 @@ class ImportStudentsAction extends Action
                     }
 
                     // استخدام StudentsImport المحسنة
-                    $import = new \App\Imports\StudentsImport(
+                    $import = new StudentsImport(
                         auth()->user()?->school_id,
                         $data['default_branch_id'] ?? null,
                         $data['import_mode']
@@ -93,16 +83,30 @@ class ImportStudentsAction extends Action
                         unlink($filePath);
                     }
 
-                    // عد النتائج من قاعدة البيانات
+                    // جمع إحصائيات الاستيراد
+                    $successCount = $import->getSuccessCount();
+                    $updateCount = $import->getUpdateCount();
+                    $skipCount = $import->getSkipCount();
                     $totalStudents = Student::where('school_id', auth()->user()?->school_id)->count();
                     
-                    $message = "تم إنجاز عملية الاستيراد بنجاح\n";
-                    $message .= "إجمالي عدد الطلاب في النظام: {$totalStudents}";
+                    $message = "تم إنجاز عملية الاستيراد بنجاح\n\n";
+                    $message .= "📊 إحصائيات العملية:\n";
+                    $message .= "• طلاب جدد: {$successCount}\n";
+                    
+                    if ($updateCount > 0) {
+                        $message .= "• طلاب محدثة: {$updateCount}\n";
+                    }
+                    
+                    if ($skipCount > 0) {
+                        $message .= "• طلاب مُتجاهلة: {$skipCount}\n";
+                    }
+                    
+                    $message .= "• إجمالي الطلاب في النظام: {$totalStudents}";
                     
                     $errors = $import->getErrors();
                     
                     if (!empty($errors)) {
-                        $message .= "\n\nملاحظات ومشاكل:\n" . implode("\n", array_slice($errors, 0, 5));
+                        $message .= "\n\n⚠️ ملاحظات ومشاكل:\n" . implode("\n", array_slice($errors, 0, 5));
                         if (count($errors) > 5) {
                             $message .= "\n... و " . (count($errors) - 5) . " ملاحظة أخرى";
                         }

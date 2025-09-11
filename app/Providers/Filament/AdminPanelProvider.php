@@ -55,12 +55,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AttendanceChart::class,
                 \App\Filament\Widgets\LatestSchoolsWidget::class,
             ])
-            ->navigationGroups([
-                NavigationGroup::make()->label('نظام إنصراف الذكي'),
-                NavigationGroup::make()->label('المحتوى'),
-                NavigationGroup::make()->label('الإشعارات'),
-                NavigationGroup::make()->label('الإعدادات'),
-            ])
+
             ->navigationItems([
                 // مثال على عنصر تنقل مع صلاحية
                 NavigationItem::make('roles')

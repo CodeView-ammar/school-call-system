@@ -26,7 +26,7 @@ class AcademicBandResource extends Resource
     protected static ?string $modelLabel = 'الفرقة الدراسية';
 
     protected static ?string $pluralModelLabel = 'الفرق الدراسية';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
     {

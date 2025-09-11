@@ -27,9 +27,9 @@ class UserResource extends Resource
     
     protected static ?string $pluralModelLabel = 'المستخدمين';
     
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
     
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?string $navigationGroup = 'إدارة المستخدمين';
     
     // إظهار الصفحة للمدير الأساسي فقط
 //     public static function canViewAny(): bool

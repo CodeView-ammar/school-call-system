@@ -28,9 +28,9 @@ class StudentResource extends Resource
     
     protected static ?string $pluralModelLabel = 'الطلاب';
     
-    protected static ?string $navigationGroup = 'إدارة الطلاب';
+    protected static ?string $navigationGroup = 'إدارة المستخدمين';
     
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
     {
@@ -98,11 +98,11 @@ public static function form(Form $form): Form
                     Forms\Components\TextInput::make('name_en')
                         ->label('اسم الطالب (إنجليزي)')
                         ->maxLength(255),
-                    Forms\Components\TextInput::make('student_number')
-                        ->label('رقم الطالب')
-                        ->unique(ignoreRecord: true)
-                        ->required()
-                        ->maxLength(20),
+                    // Forms\Components\TextInput::make('student_number')
+                    //     ->label('رقم الطالب')
+                    //     ->unique(ignoreRecord: true)
+                    //     ->required()
+                    //     ->maxLength(20),
                 ]),
                 Forms\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('national_id')
@@ -246,6 +246,11 @@ public static function form(Form $form): Form
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('code')
+                    ->label('الرقم الاكاديمي')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\ImageColumn::make('photo')
                     ->disk('public') // ✅ نفس الديسك
                     ->label('الصورة')
@@ -269,10 +274,10 @@ public static function form(Form $form): Form
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('student_number')
-                    ->label('رقم الطالب')
-                    ->searchable()
-                    ->sortable(),
+                // Tables\Columns\TextColumn::make('student_number')
+                //     ->label('رقم الطالب')
+                //     ->searchable()
+                //     ->sortable(),
                 Tables\Columns\TextColumn::make('branch.name_ar')
                     ->label('الفرع')
                     ->sortable(),

@@ -3,7 +3,7 @@
 namespace App\Filament\Actions;
 
 use App\Http\Controllers\Api\StudentRestoreController;
-// use App\Models\AttendanceBackup;
+use App\Models\StudentBackup;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -55,26 +55,33 @@ class RestoreStudentsAction extends Action
                             ->default('all_absent'),
 
                         // اختيار النسخة الاحتياطية
-                        // Select::make('backup_id')
-                        //     ->label('اختيار النسخة الاحتياطية')
-                        //     ->visible(fn (callable $get) => $get('restore_type') === 'restore_from_backup')
-                        //     ->required(fn (callable $get) => $get('restore_type') === 'restore_from_backup')
-                        //     ->options(function () {
-                        //         return AttendanceBackup::orderBy('created_at', 'desc')
-                        //             ->take(20)
-                        //             ->get()
-                        //             ->mapWithKeys(function ($backup) {
-                        //                 return [
-                        //                     $backup->id => sprintf(
-                        //                         '%s (%d طالب) - %s',
-                        //                         $backup->backup_name,
-                        //                         $backup->students_count,
-                        //                         $backup->created_at->format('Y/m/d H:i')
-                        //                     )
-                        //                 ];
-                        //             });
-                        //     })
-                        //     ->searchable(),
+                        Select::make('backup_id')
+                            ->label('اختيار النسخة الاحتياطية')
+                            ->visible(fn (callable $get) => $get('restore_type') === 'restore_from_backup')
+                            ->required(fn (callable $get) => $get('restore_type') === 'restore_from_backup')
+                            ->options(function () {
+                                return StudentBackup::where('school_id', auth()->user()?->school_id)
+                                    ->orderBy('created_at', 'desc')
+                                    ->take(20)
+                                    ->get()
+                                    ->mapWithKeys(function ($backup) {
+                                        $status = $backup->last_restored_at ? '(مُستَردة)' : '(جديدة)';
+                                        return [
+                                            $backup->id => sprintf(
+                                                '%s %s - %d طالب - %s - %s',
+                                                $backup->backup_name,
+                                                $status,
+                                                $backup->students_count,
+                                                $backup->formatted_file_size,
+                                                $backup->created_at->format('Y/m/d H:i')
+                                            )
+                                        ];
+                                    });
+                            })
+                            ->placeholder('اختر النسخة الاحتياطية للاسترداد منها')
+                            ->helperText('⚠️ سيتم حذف جميع البيانات الحالية واستبدالها ببيانات النسخة الاحتياطية')
+                            ->searchable()
+                            ->preload(),
 
                         // اسم النسخة الاحتياطية الجديدة
                         TextInput::make('backup_name')

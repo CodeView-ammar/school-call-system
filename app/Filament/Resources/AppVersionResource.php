@@ -35,9 +35,9 @@ class AppVersionResource extends Resource
     
     protected static ?string $pluralModelLabel = 'إدارة الاصدارات';
     
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 0;
     
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?string $navigationGroup = ' إدارة النظام الشركة';
 
     
     // إظهار الصفحة للمدير الأساسي فقط

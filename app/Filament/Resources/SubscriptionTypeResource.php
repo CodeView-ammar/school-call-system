@@ -21,7 +21,8 @@ class SubscriptionTypeResource extends Resource
     protected static ?string $navigationLabel = 'أنواع الاشتراك';
     protected static ?string $modelLabel = 'نوع الاشتراك';
     protected static ?string $pluralModelLabel = 'أنواع الاشتراك';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?int $navigationSort = 0;
+    protected static ?string $navigationGroup = ' إدارة النظام الشركة';
 // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool
     {

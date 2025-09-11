@@ -29,9 +29,9 @@ class DriverResource extends Resource
     
     protected static ?string $pluralModelLabel = 'سائق';
     
-    protected static ?string $navigationGroup = 'إدارة النقل';
+    protected static ?string $navigationGroup = 'إدارة المستخدمين';
     
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Forms\Form $form): Forms\Form
     {

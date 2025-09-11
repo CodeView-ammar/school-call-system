@@ -29,7 +29,7 @@ class EducationLevelResource extends Resource
     
     protected static ?string $navigationGroup = 'إدارة المدارس';
     
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();

@@ -19,8 +19,8 @@ class CallTypeResource extends Resource
     protected static ?string $navigationLabel = 'أنواع الندائات';
     protected static ?string $modelLabel = 'نوع النداء';
     protected static ?string $pluralModelLabel = 'أنواع الندائات';
-
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = ' إدارة النظام الشركة';
     // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool
     {

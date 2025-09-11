@@ -30,7 +30,7 @@ class BusResource extends Resource
     
     protected static ?string $navigationGroup = 'إدارة النقل';
     
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
     {

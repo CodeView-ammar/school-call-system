@@ -18,7 +18,8 @@ class HolidayResource extends Resource
     protected static ?string $navigationLabel = 'العطل';
     protected static ?string $modelLabel = 'عطلة';
     protected static ?string $pluralModelLabel = 'العطل';
-    protected static ?string $navigationGroup = 'الاستعداد والانصراف';
+    protected static ?int $navigationSort = 0;
+    protected static ?string $navigationGroup = 'إدارة نظام المدرسة';
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
         {
             $query = parent::getEloquentQuery();
@@ -53,10 +54,10 @@ public static function form(Form $form): Form
                         ->required()
                         ->native(false)
                         ->rules([
-                            function (\Filament\Forms\Get $get) {
-                                return function (string $attribute, $value, \Closure $fail) use ($get) {
+                            function (\Filament\Forms\Get $get, ?\Filament\Forms\Components\Component $component = null) {
+                                return function (string $attribute, $value, \Closure $fail) use ($get, $component) {
                                     $from = $value;
-                                    $to   = $get('to_date');
+                                    $to = $get('to_date');
                                     $schoolId = $get('school_id') ?? auth()->user()->school_id;
 
                                     if (!$from || !$to) {
@@ -66,12 +67,12 @@ public static function form(Form $form): Form
                                     $query = \App\Models\Holiday::where('school_id', $schoolId)
                                         ->where(function ($q) use ($from, $to) {
                                             $q->where('from_date', '<=', $to)
-                                              ->where('to_date', '>=', $from);
+                                            ->where('to_date', '>=', $from);
                                         });
 
-                                    // إذا تعديل -> استثني السجل الحالي
-                                    if ($recordId = request()->route('record')) {
-                                        $query->where('id', '!=', $recordId);
+                                    // ✅ استثناء السجل الحالي إن كنا في التعديل
+                                    if ($component?->getContainer()->getRecord()) {
+                                        $query->where('id', '!=', $component->getContainer()->getRecord()->id);
                                     }
 
                                     if ($query->exists()) {

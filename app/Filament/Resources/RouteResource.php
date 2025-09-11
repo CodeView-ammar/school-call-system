@@ -33,7 +33,7 @@ class RouteResource extends Resource
     
     protected static ?string $navigationGroup = 'إدارة النقل';
     
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
     public static function getEloquentQuery(): Builder
     {

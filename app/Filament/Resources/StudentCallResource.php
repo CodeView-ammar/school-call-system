@@ -19,7 +19,7 @@ class StudentCallResource extends Resource
     
     protected static ?string $navigationGroup = 'ندائات';
     
-    protected static ?int $navigationSort = 0;
+    protected static ?int $navigationSort = 4;
     
     protected static ?string $navigationIcon = 'heroicon-o-phone';
     protected static ?string $navigationLabel = 'نداءات الطلاب';

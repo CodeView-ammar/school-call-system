@@ -19,7 +19,7 @@ class SubscriptionResource extends Resource
     protected static ?string $navigationLabel = 'الاشتراكات';
     protected static ?string $modelLabel = 'اشتراك';
     protected static ?string $pluralModelLabel = 'الاشتراكات';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?string $navigationGroup = ' إدارة النظام الشركة';
 // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool
     {

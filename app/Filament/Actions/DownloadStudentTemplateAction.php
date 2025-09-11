@@ -41,20 +41,56 @@ class DownloadStudentTemplateAction extends Action
                             Select::make('include_sample_data')
                                 ->label('تضمين بيانات عينة')
                                 ->options([
-                                    'yes' => 'نعم، أضف 3 طلاب كمثال',
+                                    'yes' => 'نعم، أضف أمثلة (مُوصى به)',
+                                    'limited' => 'أمثلة محدودة (طالب واحد)',
                                     'no' => 'لا، قالب فارغ فقط'
                                 ])
                                 ->default('yes')
                                 ->helperText('البيانات العينة توضح كيفية تعبئة القالب بشكل صحيح'),
 
-                            Select::make('template_language')
-                                ->label('لغة العناوين')
+                            Select::make('template_type')
+                                ->label('نوع القالب')
                                 ->options([
-                                    'ar' => 'العربية',
-                                    'en' => 'الإنجليزية'
+                                    'complete' => 'قالب شامل (جميع الحقول)',
+                                    'basic' => 'قالب أساسي (الحقول المطلوبة فقط)',
+                                    'custom' => 'قالب مخصص'
                                 ])
-                                ->default('ar')
-                                ->helperText('اختر لغة عناوين الأعمدة'),
+                                ->default('complete')
+                                ->reactive()
+                                ->helperText('اختر نوع القالب حسب احتياجاتك'),
+                        ]),
+                        
+                        // خيارات القالب المخصص
+                        Grid::make(3)->schema([
+                            Select::make('include_guardians')
+                                ->label('تضمين أولياء الأمور')
+                                ->visible(fn (callable $get) => $get('template_type') === 'custom')
+                                ->options([
+                                    'both' => 'ولي أمر أول وثاني',
+                                    'primary' => 'ولي أمر أول فقط',
+                                    'none' => 'لا تتضمن'
+                                ])
+                                ->default('both'),
+
+                            Select::make('include_location')
+                                ->label('تضمين معلومات الموقع')
+                                ->visible(fn (callable $get) => $get('template_type') === 'custom')
+                                ->options([
+                                    'yes' => 'نعم (الإحداثيات والعنوان)',
+                                    'address_only' => 'العنوان فقط',
+                                    'no' => 'لا'
+                                ])
+                                ->default('yes'),
+
+                            Select::make('include_transport')
+                                ->label('تضمين معلومات النقل')
+                                ->visible(fn (callable $get) => $get('template_type') === 'custom')
+                                ->options([
+                                    'yes' => 'نعم (كود الحافلة ومكان الاستقلال)',
+                                    'pickup_only' => 'مكان الاستقلال فقط',
+                                    'no' => 'لا'
+                                ])
+                                ->default('yes'),
                         ])
                     ])
             ])
@@ -64,129 +100,19 @@ class DownloadStudentTemplateAction extends Action
                     $sheet = $spreadsheet->getActiveSheet();
                     $sheet->setTitle('قالب الطلاب');
 
-                    // تحديد الأعمدة بأسماء اللغة الإنجليزية المطلوبة للاستيراد
-                    $headers = [
-                        'student_code',
-                        'student_name_ar',
-                        'branch_name',
-                        'academic_band_name',
-                        'grade_class_name',
-                        'student_number',
-                        'student_name_en',
-                        'national_id',
-                        'date_of_birth',
-                        'gender',
-                        'nationality',
-                        'address_ar',
-                        'address_en',
-                        'latitude',
-                        'longitude',
-                        'medical_notes',
-                        'emergency_contact',
-                        'pickup_location',
-                        'bus_code',
-                        'is_active',
-                        'guardian_1_name',
-                        'guardian_1_phone',
-                        'guardian_1_relationship',
-                        'guardian_2_name',
-                        'guardian_2_phone',
-                        'guardian_2_relationship'
-                    ];
+                    // تحديد الأعمدة حسب نوع القالب
+                    $headers = $this->getTemplateHeaders($data);
+                    $arabicHeaders = $this->getArabicHeaders($data);
 
                     // إضافة العناوين الإنجليزية
                     $sheet->fromArray([$headers], null, 'A1');
 
                     // إضافة صف توضيحي بالعربية
-                    $arabicHeaders = [
-                        'كود الطالب (مطلوب)',
-                        'اسم الطالب بالعربية (مطلوب)',
-                        'اسم الفرع (مطلوب)',
-                        'اسم الفرقة الأكاديمية (مطلوب)',
-                        'اسم الفصل الدراسي (مطلوب)',
-                        'الرقم الأكاديمي',
-                        'اسم الطالب بالإنجليزية',
-                        'رقم الهوية',
-                        'تاريخ الميلاد (YYYY-MM-DD)',
-                        'الجنس (ذكر/أنثى)',
-                        'الجنسية',
-                        'العنوان بالعربية',
-                        'العنوان بالإنجليزية',
-                        'خط العرض',
-                        'خط الطول',
-                        'الملاحظات الطبية',
-                        'جهة اتصال الطوارئ',
-                        'مكان الاستقلال',
-                        'كود الحافلة',
-                        'نشط (نعم/لا)',
-                        'اسم ولي الأمر الأول',
-                        'هاتف ولي الأمر الأول',
-                        'علاقة ولي الأمر الأول',
-                        'اسم ولي الأمر الثاني',
-                        'هاتف ولي الأمر الثاني',
-                        'علاقة ولي الأمر الثاني'
-                    ];
+                    $arabicHeaders = $this->getArabicHeaders($data);
                     $sheet->fromArray([$arabicHeaders], null, 'A2');
 
                     // بيانات الأمثلة
-                    $sampleData = [
-                        [
-                            'STD001',
-                            'أحمد محمد علي',
-                            'الفرع الرئيسي',
-                            'المرحلة الابتدائية',
-                            'الصف الأول أ',
-                            'AC001',
-                            'Ahmed Mohammed Ali',
-                            '1234567890',
-                            '2015-01-15',
-                            'ذكر',
-                            'السعودية',
-                            'الرياض - حي النرجس',
-                            'Riyadh - Al Narjis District',
-                            '24.7136',
-                            '46.6753',
-                            'لا يوجد',
-                            'والد الطالب: 0501234567',
-                            'بوابة المدرسة الرئيسية',
-                            'BUS001',
-                            'نعم',
-                            'محمد علي أحمد',
-                            '0501234567',
-                            'أب',
-                            'فاطمة سعد محمد',
-                            '0507654321',
-                            'أم'
-                        ],
-                        [
-                            'STD002',
-                            'فاطمة سعد أحمد',
-                            'الفرع الرئيسي',
-                            'المرحلة الابتدائية',
-                            'الصف الثاني ب',
-                            'AC002',
-                            'Fatima Saad Ahmed',
-                            '0987654321',
-                            '2014-06-20',
-                            'أنثى',
-                            'السعودية',
-                            'الرياض - حي الملقا',
-                            'Riyadh - Al Malqa District',
-                            '24.7500',
-                            '46.6000',
-                            'حساسية من الفول السوداني',
-                            'والدة الطالبة: 0509876543',
-                            'المدخل الجانبي',
-                            'BUS002',
-                            'نعم',
-                            'سعد أحمد محمد',
-                            '0509876543',
-                            'أب',
-                            'نورا خالد علي',
-                            '0501122334',
-                            'أم'
-                        ]
-                    ];
+                    $sampleData = $this->getSampleData($data);
 
                     // إضافة البيانات التوضيحية
                     if (!empty($sampleData)) {
@@ -431,5 +357,260 @@ class DownloadStudentTemplateAction extends Action
         }
         $busSheet->getColumnDimension('A')->setWidth(15);
         $busSheet->getColumnDimension('B')->setWidth(25);
+    }
+
+    /**
+     * الحصول على العناوين حسب نوع القالب
+     */
+    private function getTemplateHeaders(array $data): array
+    {
+        $templateType = $data['template_type'] ?? 'complete';
+        
+        // الحقول الأساسية المطلوبة دائماً - متوافقة مع StudentsImport
+        $basicHeaders = [
+            'code',
+            'name_ar', 
+            'branch_name',
+            'academic_band_name',
+            'grade_class_name'
+        ];
+
+        if ($templateType === 'basic') {
+            return $basicHeaders;
+        }
+
+        // الحقول الإضافية للقالب الشامل
+        $additionalHeaders = [
+            'student_number',
+            'name_en',
+            'national_id',
+            'date_of_birth',
+            'gender',
+            'nationality'
+        ];
+
+        $headers = array_merge($basicHeaders, $additionalHeaders);
+
+        // إضافة حقول حسب الخيارات المخصصة
+        if ($templateType === 'custom') {
+            $includeLocation = $data['include_location'] ?? 'yes';
+            $includeTransport = $data['include_transport'] ?? 'yes';
+            $includeGuardians = $data['include_guardians'] ?? 'both';
+
+            // معلومات الموقع
+            if ($includeLocation === 'yes') {
+                $headers = array_merge($headers, ['address_ar', 'address_en', 'latitude', 'longitude']);
+            } elseif ($includeLocation === 'address_only') {
+                $headers = array_merge($headers, ['address_ar', 'address_en']);
+            }
+
+            // معلومات إضافية
+            $headers = array_merge($headers, ['medical_notes', 'emergency_contact']);
+
+            // معلومات النقل
+            if ($includeTransport === 'yes') {
+                $headers = array_merge($headers, ['pickup_location', 'bus_code']);
+            } elseif ($includeTransport === 'pickup_only') {
+                $headers = array_merge($headers, ['pickup_location']);
+            }
+
+            $headers[] = 'is_active';
+
+            // أولياء الأمور
+            if ($includeGuardians === 'both') {
+                $headers = array_merge($headers, [
+                    'guardian_name_ar', 'guardian_phone', 'guardian_relationship',
+                    '2_guardian_name_ar', '2_guardian_phone', '2_guardian_relationship'
+                ]);
+            } elseif ($includeGuardians === 'primary') {
+                $headers = array_merge($headers, [
+                    'guardian_name_ar', 'guardian_phone', 'guardian_relationship'
+                ]);
+            }
+        } else {
+            // القالب الشامل - جميع الحقول متوافقة مع StudentsImport
+            $headers = array_merge($headers, [
+                'address_ar', 'address_en', 'latitude', 'longitude',
+                'medical_notes', 'emergency_contact', 'pickup_location',
+                'bus_code', 'is_active',
+                'guardian_name_ar', 'guardian_phone', 'guardian_relationship',
+                '2_guardian_name_ar', '2_guardian_phone', '2_guardian_relationship'
+            ]);
+        }
+
+        return $headers;
+    }
+
+    /**
+     * الحصول على العناوين العربية حسب نوع القالب
+     */
+    private function getArabicHeaders(array $data): array
+    {
+        $templateType = $data['template_type'] ?? 'complete';
+        
+        // الحقول الأساسية المطلوبة دائماً
+        $basicHeaders = [
+            'كود الطالب (مطلوب)',
+            'اسم الطالب بالعربية (مطلوب)',
+            'اسم الفرع (مطلوب أو حدد فرع افتراضي)',
+            'اسم الفرقة الأكاديمية (مطلوب)',
+            'اسم الفصل الدراسي (مطلوب)'
+        ];
+
+        if ($templateType === 'basic') {
+            return $basicHeaders;
+        }
+
+        // الحقول الإضافية للقالب الشامل
+        $additionalHeaders = [
+            'الرقم الأكاديمي',
+            'اسم الطالب بالإنجليزية',
+            'رقم الهوية',
+            'تاريخ الميلاد (YYYY-MM-DD)',
+            'الجنس (ذكر/أنثى)',
+            'الجنسية'
+        ];
+
+        $headers = array_merge($basicHeaders, $additionalHeaders);
+
+        // إضافة حقول حسب الخيارات المخصصة
+        if ($templateType === 'custom') {
+            $includeLocation = $data['include_location'] ?? 'yes';
+            $includeTransport = $data['include_transport'] ?? 'yes';
+            $includeGuardians = $data['include_guardians'] ?? 'both';
+
+            // معلومات الموقع
+            if ($includeLocation === 'yes') {
+                $headers = array_merge($headers, [
+                    'العنوان بالعربية', 'العنوان بالإنجليزية', 
+                    'خط العرض', 'خط الطول'
+                ]);
+            } elseif ($includeLocation === 'address_only') {
+                $headers = array_merge($headers, ['العنوان بالعربية', 'العنوان بالإنجليزية']);
+            }
+
+            // معلومات إضافية
+            $headers = array_merge($headers, ['الملاحظات الطبية', 'جهة اتصال الطوارئ']);
+
+            // معلومات النقل
+            if ($includeTransport === 'yes') {
+                $headers = array_merge($headers, ['مكان الاستقلال', 'كود الحافلة']);
+            } elseif ($includeTransport === 'pickup_only') {
+                $headers = array_merge($headers, ['مكان الاستقلال']);
+            }
+
+            $headers[] = 'نشط (نعم/لا)';
+
+            // أولياء الأمور
+            if ($includeGuardians === 'both') {
+                $headers = array_merge($headers, [
+                    'اسم ولي الأمر الأول', 'هاتف ولي الأمر الأول', 'علاقة ولي الأمر الأول',
+                    'اسم ولي الأمر الثاني', 'هاتف ولي الأمر الثاني', 'علاقة ولي الأمر الثاني'
+                ]);
+            } elseif ($includeGuardians === 'primary') {
+                $headers = array_merge($headers, [
+                    'اسم ولي الأمر الأول', 'هاتف ولي الأمر الأول', 'علاقة ولي الأمر الأول'
+                ]);
+            }
+        } else {
+            // القالب الشامل - جميع الحقول
+            $headers = array_merge($headers, [
+                'العنوان بالعربية', 'العنوان بالإنجليزية', 
+                'خط العرض', 'خط الطول',
+                'الملاحظات الطبية', 'جهة اتصال الطوارئ', 'مكان الاستقلال',
+                'كود الحافلة', 'نشط (نعم/لا)',
+                'اسم ولي الأمر الأول', 'هاتف ولي الأمر الأول', 'علاقة ولي الأمر الأول',
+                'اسم ولي الأمر الثاني', 'هاتف ولي الأمر الثاني', 'علاقة ولي الأمر الثاني'
+            ]);
+        }
+
+        return $headers;
+    }
+
+    /**
+     * الحصول على البيانات التوضيحية
+     */
+    private function getSampleData(array $data): array
+    {
+        $templateType = $data['template_type'] ?? 'complete';
+        $includeSampleData = $data['include_sample_data'] ?? 'yes';
+        
+        if ($includeSampleData === 'no') {
+            return [];
+        }
+
+        // البيانات الأساسية
+        $basicSample = [
+            'STD001',
+            'أحمد محمد علي',
+            'الفرع الرئيسي',
+            'المرحلة الابتدائية',
+            'الصف الأول'
+        ];
+
+        if ($templateType === 'basic') {
+            return $includeSampleData === 'limited' ? [$basicSample] : [$basicSample, ['STD002', 'فاطمة سعد أحمد', 'الفرع الرئيسي', 'المرحلة الابتدائية', 'الصف الثاني']];
+        }
+
+        // البيانات الشاملة متوافقة مع StudentsImport
+        $completeSample1 = [
+            'STD001',
+            'أحمد محمد علي',
+            'الفرع الرئيسي',
+            'المرحلة الابتدائية',
+            'الصف الأول',
+            'AC001',
+            'Ahmed Mohammed Ali',
+            '1234567890',
+            '2015-01-15',
+            'ذكر',
+            'السعودية',
+            'الرياض - حي النرجس',
+            'Riyadh - Al Narjis District',
+            '24.7136',
+            '46.6753',
+            'لا يوجد',
+            'والد الطالب: 0501234567',
+            'بوابة المدرسة الرئيسية',
+            'BUS001',
+            'نعم',
+            'محمد علي أحمد',
+            '0501234567',
+            'أب',
+            'فاطمة سعد محمد',
+            '0507654321',
+            'أم'
+        ];
+
+        $completeSample2 = [
+            'STD002',
+            'فاطمة سعد أحمد',
+            'الفرع الرئيسي',
+            'المرحلة الابتدائية',
+            'الصف الثاني',
+            'AC002',
+            'Fatima Saad Ahmed',
+            '0987654321',
+            '2014-06-20',
+            'أنثى',
+            'السعودية',
+            'الرياض - حي الملقا',
+            'Riyadh - Al Malqa District',
+            '24.7500',
+            '46.6000',
+            'حساسية من الفول السوداني',
+            'والدة الطالبة: 0509876543',
+            'المدخل الجانبي',
+            'BUS002',
+            'نعم',
+            'سعد أحمد محمد',
+            '0509876543',
+            'أب',
+            'نورا خالد علي',
+            '0501122334',
+            'أم'
+        ];
+
+        return $includeSampleData === 'limited' ? [$completeSample1] : [$completeSample1, $completeSample2];
     }
 }

@@ -21,7 +21,8 @@ class SystemSettingResource extends Resource
     protected static ?string $navigationLabel = 'إعدادات النظام';
     protected static ?string $modelLabel = 'إعداد نظام';
     protected static ?string $pluralModelLabel = 'إعدادات النظام';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static ?string $navigationGroup = ' إدارة النظام الشركة';
+    protected static ?int $navigationSort = 0;
     protected static bool $shouldRegisterNavigation = true;
     // إظهار الصفحة للمدير الأساسي فقط
     public static function canViewAny(): bool

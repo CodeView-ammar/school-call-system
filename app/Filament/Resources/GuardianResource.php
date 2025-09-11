@@ -30,7 +30,7 @@ class GuardianResource extends Resource
 
     protected static ?string $pluralModelLabel = 'أولياء الأمور';
 
-    protected static ?string $navigationGroup = 'إدارة الطلاب';
+    protected static ?string $navigationGroup = 'إدارة المستخدمين';
 
     protected static ?int $navigationSort = 2;
 
